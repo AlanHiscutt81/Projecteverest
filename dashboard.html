@@ -240,6 +240,7 @@
 </script>
 <!-- ===== END DEMO BLOCK ===== -->
 <script>
+    /*
 fetch("https://docs.google.com/spreadsheets/d/https://docs.google.com/spreadsheets/d/1WvEFHXZrjS3czyjedOLKCcxz6Agt26pTPR33B23kQLo/edit?usp=sharing/gviz/tq?tqx=out:json")
   .then(res => res.text())
   .then(text => {
@@ -247,8 +248,9 @@ fetch("https://docs.google.com/spreadsheets/d/https://docs.google.com/spreadshee
     console.log("Sheet data:", json.table.rows);
   })
   .catch(err => console.error("Sheet error:", err));
+  */
 </script>
-<script>
+    <script>
 fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vTIK6OOVKAjSflrTOUeiUhoVJz_R8gx826rzuk0j5ECLCTu5E6qyWs8FKOPui3VtP9VSw07i_DkBwJJ/pub?output=csv")
   .then(r => r.text())
   .then(csv => {
@@ -270,3 +272,4 @@ fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vTIK6OOVKAjSflrTOUeiUhoVJ
 </body>
 
 </html>
+
