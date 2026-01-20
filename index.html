@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Everest Agency - Pro Command</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-slate-100 p-4 font-sans text-slate-900">
+    <div class="max-w-[1400px] mx-auto">
+        
+        <div class="flex justify-between items-center mb-6 bg-blue-900 p-6 rounded-2xl shadow-xl text-white border-b-4 border-blue-600">
+            <div>
+                <h1 class="text-2xl font-black uppercase tracking-widest italic">Everest Command</h1>
+                <p class="text-blue-300 text-[10px] font-bold uppercase tracking-widest">Revenue & Shift Control</p>
+            </div>
+            <div class="text-right bg-blue-800 p-3 rounded-xl border border-blue-700">
+                <span class="text-[10px] block text-blue-300 uppercase font-black">Projected Billing</span>
+                <span id="totalRev" class="text-2xl font-mono font-bold text-green-400">£0.00</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <div class="lg:col-span-4 space-y-4 max-h-[85vh] overflow-y-auto pr-2 custom-scroll">
+                
+                <div class="bg-white p-5 rounded-2xl shadow-sm border-t-4 border-orange-500">
+                    <h3 class="font-black text-xs uppercase mb-4 text-orange-600 italic">1. Setup Home & Rates</h3>
+                    <input id="hName" type="text" placeholder="Home Name" class="w-full p-2 border rounded mb-3 text-sm font-bold">
+                    
+                    <div class="grid grid-cols-2 gap-2 text-[9px] font-black uppercase text-slate-400 mb-2">
+                        <span>HCA Rates (£)</span><span>RGN Rates (£)</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 mb-4">
+                        <input id="hD" type="number" placeholder="Wkdy Day" class="p-2 border rounded text-xs">
+                        <input id="nD" type="number" placeholder="Wkdy Day" class="p-2 border rounded text-xs">
+                        <input id="hN" type="number" placeholder="Wkdy Ngt" class="p-2 border rounded text-xs">
+                        <input id="nN" type="number" placeholder="Wkdy Ngt" class="p-2 border rounded text-xs">
+                        <input id="hWD" type="number" placeholder="Wknd Day" class="p-2 border rounded text-xs bg-orange-50">
+                        <input id="nWD" type="number" placeholder="Wknd Day" class="p-2 border rounded text-xs bg-orange-50">
+                        <input id="hWN" type="number" placeholder="Wknd Ngt" class="p-2 border rounded text-xs bg-orange-50">
+                        <input id="nWN" type="number" placeholder="Wknd Ngt" class="p-2 border rounded text-xs bg-orange-50">
+                        <input id="hBH" type="number" placeholder="BH Day" class="p-2 border rounded text-xs bg-yellow-50">
+                        <input id="nBH" type="number" placeholder="BH Day" class="p-2 border rounded text-xs bg-yellow-50">
+                        <input id="hBHN" type="number" placeholder="BH Ngt" class="p-2 border rounded text-xs bg-yellow-50">
+                        <input id="nBHN" type="number" placeholder="BH Ngt" class="p-2 border rounded text-xs bg-yellow-50">
+                    </div>
+                    <button onclick="addHome()" class="w-

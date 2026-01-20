@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"><title>Everest Care - Official Invoice</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white; padding: 0; }
+            .invoice-card { 
+                box-shadow: none !important; 
+                border: 1px solid #e2e8f0 !important; 
+                margin-bottom: 0 !important; 
+                page-break-after: always; 
+                border-top: 16px solid #1e3a8a !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 p-8 font-sans text-slate-900">
+    <div class="max-w-[1000px] mx-auto">
+        
+        <nav class="no-print bg-white p-6 rounded-[30px] shadow-lg mb-8 border-t-4 border-blue-900">
+            <div class="flex flex-wrap items-end gap-6">
+                <div>
+                    <label class="text-[9px] font-black uppercase text-slate-400 block mb-1">Period Start</label>
+                    <input type="date" id="dateStart" class="p-2 border-2 rounded-xl font-bold text-sm outline-none focus:border-blue-900">
+                </div>
+                <div>
+                    <label class="text-[9px] font-black uppercase text-slate-400 block mb-1">Period End</label>
+                    <input type="date" id="dateEnd" class="p-2 border-2 rounded-xl font-bold text-sm outline-none focus:border-blue-900">
+                </div>
+                <button onclick="renderInvoices()" class="bg-blue-900 text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase shadow-lg hover:bg-black transition">Generate Invoices</button>
+                
+                <div class="flex-1 flex justify-end gap-3">
+                    <button onclick="archiveCurrentInvoices()" class="bg-green-600 text-white px-5 py-3 rounded-2xl text-[10px] font-black uppercase shadow-md hover:bg-green-700">Archive & Clear</button>
+                    <button onclick="recallArchive()" class="bg-orange-100 text-orange-700 px-5 py-3 rounded-2xl text-[10px] font-black uppercase border border-orange-200">Recall History</button>
+                    <a href="dashboard.html" class="bg-slate-100 text-slate-400 px-5 py-3 rounded-2xl text-[10px] font-black uppercase border">Back</a>
+                </div>
+            </div>
+            <div id="archiveLabel" class="hidden mt-4 text-center text-[10px] font-black text-orange-500 uppercase tracking-widest italic border-t pt-2">*** Viewing Archived Data - Not Live ***</div>
+        </nav>
+
+        <div id="invoiceContainer" class="space-y-12">
+            <div class="p-20 text-center bg-white rounded-[40px] border-4 border-dashed text-slate-300 font-black uppercase text-xs">
+                Select dates above to generate invoices
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SHIFT_KEY = 'ev_shifts_master';
+        const HOME_KEY = 'ev_homes_db';
+        const STAFF_KEY = 'everest_v5_final';
+        const ARCHIVE_KEY = 'ev_invoice_archive_v1';
+
+        function getDecimalHours(start, end) {
+            if(!start || !end) return 0;
+            const [sH, sM] = start.split(':').map(Number);
+            const [eH, eM] = end.split(':').map(Number);
+            let diff = (eH + eM/60) - (sH + sM/60);
+            if (diff < 0) diff += 24; 
+            return diff;
+        }
+
+        function getMatrixRate(shift, homeData) {
+            if (!homeData) return 0;
+            const d = new Date(shift.date);
+            const isWeekend = (d.getDay() === 0 || d.getDay() === 6);
+            const isNight = (shift.shiftType === 'Night');
+            if (shift.isBH) return parseFloat(isNight ? homeData.bhN : homeData.bhD) || 0;
+            if (isWeekend) return parseFloat(isNight ? homeData.weN : homeData.weD) || 0;
+            return parseFloat(isNight ? homeData.wdN : homeData.wdD) || 0;
+        }
+
+        function renderInvoices() {
+            document.getElementById('archiveLabel').classList.add('hidden');
+            const startStr = document.getElementById('dateStart').value;
+            const endStr = document.getElementById('dateEnd').value;
+            
+            if(!startStr || !endStr) return alert("Please select a date range");
+
+            const shifts = JSON.parse(localStorage.getItem(SHIFT_KEY)) || [];
+            const homes = JSON.parse(localStorage.getItem(HOME_KEY)) || [];
+            const staffRegistry = JSON.parse(localStorage.getItem(STAFF_KEY)) || [];
+            
+            const container = document.getElementById('invoiceContainer');
+            
+            const completed = shifts.filter(s => {
+                return s.status === 'completed' && s.date >= startStr && s.date <= endStr;
+            });
+
+            if (completed.length === 0) {
+                container.innerHTML = `<div class="p-20 text-center bg-white rounded-[40px] border-4 border-dashed text-slate-300 font-black uppercase text-xs">No completed shifts found for these dates</div>`;
+                return;
+            }
+
+            const grouped = completed.reduce((acc, s) => {
+                if (!acc[s.home]) acc[s.home] = [];
+                acc[s.home].push(s);
+                return acc;
+            }, {});
+
+            container.innerHTML = Object.keys(grouped).map((homeName, index) => {
+                const homeShifts = grouped[homeName];
+                const homeData = homes.find(h => h.name === homeName);
+                let grandTotal = 0;
+                const invNo = 4500 + index; 
+                const cardId = `inv_card_${index}`;
+
+                const rows = homeShifts.map(s => {
+                    const hours = getDecimalHours(s.start, s.end);
+                    const rate = getMatrixRate(s, homeData);
+                    const lineTotal = hours * rate;
+                    grandTotal += lineTotal;
+                    const staffMember = staffRegistry.find(st => st.id === s.staffId);
+                    const nameToDisplay = staffMember ? staffMember.name : "Unassigned Staff";
+
+                    return `
+                    <tr class="border-b border-slate-100 text-[11px]">
+                        <td class="py-3 font-medium">${s.date}</td>
+                        <td class="py-3 font-bold text-slate-800 uppercase">${nameToDisplay}</td>
+                        <td class="py-3 text-slate-500">${s.role}</td>
+                        <td class="py-3 text-center">${hours.toFixed(2)}</td>
+                        <td class="py-3 text-center">£${rate.toFixed(2)}</td>
+                        <td class="py-3 text-right font-black">£${lineTotal.toFixed(2)}</td>
+                    </tr>`;
+                }).join('');
+
+                return `
+                <div id="${cardId}" class="invoice-card bg-white p-12 rounded-[20px] shadow-2xl border-t-[16px] border-blue-900 mb-10 relative">
+                    <button onclick="printSingleInvoice('${cardId}')" class="no-print absolute top-4 right-4 bg-slate-50 text-slate-400 px-3 py-1 rounded-md text-[8px] font-black uppercase border hover:bg-blue-900 hover:text-white transition">Print PDF</button>
+                    <div class="flex justify-between items-start mb-12">
+                        <div class="flex items-center gap-4">
+                            <img src="logo.png" alt="Logo" class="h-16 w-auto" onerror="this.style.display='none'">
+                            <div>
+                                <h1 class="text-xl font-black text-blue-900 tracking-tighter uppercase italic">Everest Care</h1>
+                                <p class="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Healthcare Staffing</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <h2 class="text-4xl font-black uppercase text-slate-100 leading-none">INVOICE</h2>
+                            <p class="text-[10px] font-bold mt-1 uppercase">INV-${invNo} | ${new Date().toLocaleDateString('en-GB')}</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-10 mb-10 border-b pb-10">
+                        <div>
+                            <p class="text-[9px] font-black text-blue-600 uppercase mb-2 tracking-widest">Client:</p>
+                            <p class="text-lg font-black text-slate-800 uppercase leading-none">${homeName}</p>
+                            <p class="text-[10px] text-slate-500 mt-2 uppercase">Period: ${startStr} to ${endStr}</p>
+                        </div>
+                        <div class="text-right text-[10px] text-slate-500">
+                            <p class="font-bold text-slate-800 uppercase">Everest Care Agency Ltd</p>
+                            <p>12-14 Business Plaza, London, EC1V 2NX</p>
+                            <p>accounts@everestcare.co.uk</p>
+                        </div>
+                    </div>
+                    <table class="w-full mb-10">
+                        <thead>
+                            <tr class="border-b-2 border-slate-900 text-[9px] font-black uppercase text-slate-400">
+                                <th class="text-left pb-3">Date</th><th class="text-left pb-3">Staff</th><th class="text-left pb-3">Grade</th>
+                                <th class="text-center pb-3">Hrs</th><th class="text-center pb-3">Rate</th><th class="text-right pb-3">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                    <div class="flex justify-between items-end">
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 text-[9px] w-64">
+                            <p class="font-bold uppercase mb-1">Bank Details</p>
+                            <p>Everest Commercial Bank | 20-45-00 | 88224411</p>
+                            <p class="mt-1 text-blue-800 font-bold underline">Terms: 28 Days</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[10px] font-black text-slate-400 uppercase">Grand Total Due</p>
+                            <p class="text-5xl font-black text-blue-900 tracking-tighter">£${grandTotal.toFixed(2)}</p>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function archiveCurrentInvoices() {
+            const container = document.getElementById('invoiceContainer');
+            const html = container.innerHTML;
+
+            if (html.includes('Select dates') || html.includes('No completed shifts')) {
+                return alert("Nothing to archive. Please generate invoices first.");
+            }
+
+            const period = prompt("Name this archive (e.g. Week 1 Jan):");
+            if (!period) return;
+
+            const archive = JSON.parse(localStorage.getItem(ARCHIVE_KEY)) || [];
+            archive.push({ id: Date.now(), period, date: new Date().toLocaleString(), content: html });
+            localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archive));
+
+            // CLEAR THE SCREEN AFTER SUCCESS
+            container.innerHTML = `
+                <div class="p-20 text-center bg-white rounded-[40px] border-4 border-green-500 border-dashed">
+                    <div class="text-5xl mb-4">✅</div>
+                    <h3 class="text-xl font-black text-green-600 uppercase">Period Archived</h3>
+                    <p class="text-[10px] text-slate-400 mt-2 uppercase font-bold italic">Workspace cleared. Data moved to history.</p>
+                    <button onclick="location.reload()" class="mt-6 bg-slate-100 px-6 py-2 rounded-full text-[10px] font-black uppercase border">Start New Batch</button>
+                </div>
+            `;
+            document.getElementById('dateStart').value = '';
+            document.getElementById('dateEnd').value = '';
+        }
+
+        function recallArchive() {
+            const archive = JSON.parse(localStorage.getItem(ARCHIVE_KEY)) || [];
+            if (archive.length === 0) return alert("No archives found");
+            let list = archive.map((a, i) => `${i+1}. ${a.period} (${a.date})`).join('\n');
+            const choice = prompt("Select Archive #:\n\n" + list);
+            const idx = parseInt(choice) - 1;
+            if (archive[idx]) {
+                document.getElementById('invoiceContainer').innerHTML = archive[idx].content;
+                document.getElementById('archiveLabel').classList.remove('hidden');
+            }
+        }
+
+        function printSingleInvoice(id) {
+            const content = document.getElementById(id).outerHTML;
+            const win = window.open('', '_blank');
+            win.document.write(`<html><head><title>Print Invoice</title><script src="https://cdn.tailwindcss.com"><\/script><style>@media print{.no-print{display:none} body{padding:40px;}}</style></head><body>${content}</body></html>`);
+            win.document.close();
+            setTimeout(() => { win.print(); win.close(); }, 500);
+        }
+    </script>
+</body>
+</html>

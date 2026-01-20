@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"><title>Everest - Master Calendar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+        .day-box { min-height: 140px; }
+        
+        /* YOUR SPECIFIC COLOR SCHEME */
+        .status-requested { background: #FFFFFF; border: 1px solid #cbd5e1; color: #64748b; } /* White */
+        .status-assigned { background: #FEF08A; border: 1px solid #eab308; color: #854d0e; }  /* Yellow */
+        .status-confirmed { background: #BBF7D0; border: 1px solid #22c55e; color: #14532d; } /* Green */
+        .status-completed { background: #1E3A8A; border: 1px solid #1e3a8a; color: #FFFFFF; } /* Dark Blue */
+        .status-cancelled { background: #FEE2E2; border: 1px solid #ef4444; color: #991b1b; text-decoration: line-through; } /* Red */
+        
+        /* Custom scrollbar for busy days */
+        .shift-container::-webkit-scrollbar { width: 3px; }
+        .shift-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-slate-50 p-8 font-sans">
+    <div class="max-w-[1600px] mx-auto">
+        
+        <nav class="flex gap-4 mb-8">
+            <a href="dashboard.html" class="bg-white text-slate-400 px-6 py-2 rounded-full text-[10px] font-black uppercase border hover:bg-blue-50">Dashboard</a>
+            <a href="calendar.html" class="bg-blue-900 text-white px-6 py-2 rounded-full text-[10px] font-black uppercase shadow-lg">Calendar</a>
+            <a href="payroll.html" class="bg-white text-slate-400 px-6 py-2 rounded-full text-[10px] font-black uppercase border hover:bg-blue-50">Payroll</a>
+            <a href="invoices.html" class="bg-white text-slate-400 px-6 py-2 rounded-full text-[10px] font-black uppercase border hover:bg-blue-50">Invoicing</a>
+        </nav>
+
+        <div class="bg-white p-8 rounded-[40px] shadow-xl mb-6 border-b-8 border-blue-900">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+                <div>
+                    <h1 id="monthDisplay" class="text-4xl font-black uppercase tracking-tighter text-slate-800 leading-none">Month Year</h1>
+                    <div class="flex gap-2 mt-4">
+                        <button onclick="changeMonth(-1)" class="bg-slate-100 px-4 py-2 rounded-xl hover:bg-blue-900 hover:text-white transition font-black">◀</button>
+                        <button onclick="changeMonth(1)" class="bg-slate-100 px-4 py-2 rounded-xl hover:bg-blue-900 hover:text-white transition font-black">▶</button>
+                    </div>
+                </div>
+                
+                <div class="bg-slate-50 p-6 rounded-3xl border border-slate-100 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                    <div class="flex items-center gap-2">
+                        <span class="w-4 h-4 rounded shadow-sm bg-white border border-slate-300"></span>
+                        <span class="text-[9px] font-black uppercase tracking-widest text-slate-500">Requested</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-4 h-4 rounded shadow-sm bg-yellow-200"></span>
+                        <span class="text-[9px] font-black uppercase tracking-widest text-yellow-700">Assigned</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-4 h-4 rounded shadow-sm bg-green-200"></span>
+                        <span class="text-[9px] font-black uppercase tracking-widest text-green-700">Confirmed</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-4 h-4 rounded shadow-sm bg-blue-900"></span>
+                        <span class="text-[9px] font-black uppercase tracking-widest text-blue-900">Completed</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-4 h-4 rounded shadow-sm bg-red-200"></span>
+                        <span class="text-[9px] font-black uppercase tracking-widest text-red-600">Cancelled</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="calendar-grid text-center mb-4 px-2">
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Monday</div>
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Tuesday</div>
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Wednesday</div>
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Thursday</div>
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Friday</div>
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Saturday</div>
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Sunday</div>
+            </div>
+            
+            <div id="calendarDays" class="calendar-grid"></div>
+        </div>
+    </div>
+
+    <script>
+        const SHIFT_KEY = 'ev_shifts_master';
+        const STAFF_KEY = 'everest_v5_final';
+        let currentViewDate = new Date();
+
+        function renderCalendar() {
+            const shifts = JSON.parse(localStorage.getItem(SHIFT_KEY)) || [];
+            const staff = JSON.parse(localStorage.getItem(STAFF_KEY)) || [];
+            const container = document.getElementById('calendarDays');
+            const monthDisplay = document.getElementById('monthDisplay');
+
+            const year = currentViewDate.getFullYear();
+            const month = currentViewDate.getMonth();
+            
+            monthDisplay.innerText = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(currentViewDate);
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const offset = firstDay === 0 ? 6 : firstDay - 1;
+
+            container.innerHTML = '';
+
+            for (let i = 0; i < offset; i++) {
+                container.innerHTML += `<div class="day-box bg-slate-50/30 rounded-3xl border border-transparent"></div>`;
+            }
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const dayShifts = shifts.filter(s => s.date === dateStr);
+                
+                let shiftHTML = dayShifts.map(s => {
+                    const st = staff.find(x => x.id === s.staffId);
+                    const staffName = st ? st.name : 'Unassigned';
+                    const homeName = s.home || 'Unknown Home';
+                    
+                    return `
+                        <div class="status-${s.status} p-2 mb-1.5 rounded-xl shadow-sm border truncate leading-tight">
+                            <div class="text-[8px] font-black uppercase opacity-70">${homeName}</div>
+                            <div class="text-[9px] font-black uppercase">${s.start}-${s.end}</div>
+                            <div class="text-[8px] font-bold italic truncate opacity-90">${staffName}</div>
+                        </div>
+                    `;
+                }).join('');
+
+                container.innerHTML += `
+                    <div class="day-box bg-white border border-slate-100 p-3 rounded-[25px] hover:border-blue-200 transition">
+                        <span class="text-xs font-black text-slate-300 mb-2 block">${d}</span>
+                        <div class="shift-container max-h-[110px] overflow-y-auto pr-1">
+                            ${shiftHTML}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function changeMonth(dir) {
+            currentViewDate.setMonth(currentViewDate.getMonth() + dir);
+            renderCalendar();
+        }
+
+        window.onload = renderCalendar;
+    </script>
+</body>
+</html>

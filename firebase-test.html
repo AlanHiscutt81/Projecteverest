@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Firebase test</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 16px; }
+    input, button { padding: 8px; font-size: 16px; }
+    .row { margin: 10px 0; }
+    code { background: #f2f2f2; padding: 2px 6px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h2>Firebase real-time test</h2>
+
+  <div class="row">
+    Shared message: <strong id="sharedMessage">Loading…</strong>
+  </div>
+
+  <div class="row">
+    <input id="msgInput" placeholder="Type a message..." />
+    <button id="sendBtn">Send</button>
+  </div>
+
+  <p>This page reads/writes <code>shared/&lt;DOC_ID&gt;</code> in Firestore.</p>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+    // TODO 1: paste your firebaseConfig here (from Firebase "Add Firebase SDK" screen)
+    const firebaseConfig = {
+      apiKey: "PASTE_YOURS",
+      authDomain: "PASTE_YOURS",
+      projectId: "PASTE_YOURS",
+      storageBucket: "PASTE_YOURS",
+      messagingSenderId: "PASTE_YOURS",
+      appId: "PASTE_YOURS"
+    };
+
+    // TODO 2: paste your Firestore document id here (the one under shared)
+    const DOC_ID = "PASTE_DOC_ID_HERE";
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const ref = doc(db, "shared", DOC_ID);
+
+    // Real-time listener
+    onSnapshot(ref, (snap) => {
+      const data = snap.data() || {};
+      document.getElementById("sharedMessage").textContent = data.message ?? "(no message)";
+    });
+
+    // Write update
+    document.getElementById("sendBtn").addEventListener("click", async () => {
+      const msg = document.getElementById("msgInput").value.trim();
+      if (!msg) return;
+      await setDoc(ref, { message: msg }, { merge: true });
+      document.getElementById("msgInput").value = "";
+    });
+  </script>
+</body>
+</html>
