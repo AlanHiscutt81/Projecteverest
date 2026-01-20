@@ -207,46 +207,21 @@
 </div>
 
 <script>
-function extractFirstJsonObject(text) {
-  let inString = false;
-  let escape = false;
-  let depth = 0;
-  let start = -1;
-
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-
-    if (escape) { escape = false; continue; }
-    if (ch === "\\") { if (inString) escape = true; continue; }
-    if (ch === '"') { inString = !inString; continue; }
-    if (inString) continue;
-
-    if (ch === "{") {
-      if (depth === 0) start = i;
-      depth++;
-    } else if (ch === "}") {
-      depth--;
-      if (depth === 0 && start !== -1) {
-        return text.slice(start, i + 1);
-      }
-    }
-  }
-  throw new Error("No complete JSON object found in sheet output");
-}
-
 fetch("https://docs.google.com/spreadsheets/d/1WvEFHXZrjS3czyjedOLKCcxz6Agt26pTPR33B23kQLo/gviz/tq?tqx=out:json")
-  .then(r => r.text())
-  .then(txt => {
-    // Google CSV output may double quotes inside fields
-    const cleaned = txt.replace(/""/g, '"');
-    const jsonString = extractFirstJsonObject(cleaned);
-
+  .then(res => res.text())
+  .then(text => {
+    // This line cleans up the "junk" Google adds to the start and end
+    const jsonString = text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1);
     const data = JSON.parse(jsonString);
+    
+    // This saves your data so the rest of your dashboard can use it
     window.EVEREST_DATA = data;
 
     console.log("EVEREST DATA LOADED FROM GOOGLE SHEETS", data);
   })
-  .catch(err => console.error("GOOGLE SHEETS LOAD FAILED", err));
+  .catch(err => {
+    console.error("GOOGLE SHEETS LOAD FAILED", err);
+  });
 </script>
 
 
@@ -254,6 +229,7 @@ fetch("https://docs.google.com/spreadsheets/d/1WvEFHXZrjS3czyjedOLKCcxz6Agt26pTP
 </body>
 
 </html>
+
 
 
 
