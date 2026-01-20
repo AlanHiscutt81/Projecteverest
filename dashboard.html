@@ -240,26 +240,19 @@
 </script>
 <!-- ===== END DEMO BLOCK ===== -->
 <script>
-    /*
-fetch("https://docs.google.com/spreadsheets/d/https://docs.google.com/spreadsheets/d/1WvEFHXZrjS3czyjedOLKCcxz6Agt26pTPR33B23kQLo/edit?usp=sharing/gviz/tq?tqx=out:json")
-  .then(res => res.text())
-  .then(text => {
-    const json = JSON.parse(text.substr(47).slice(0, -2));
-    console.log("Sheet data:", json.table.rows);
-  })
-  .catch(err => console.error("Sheet error:", err));
-  */
-</script>
 fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vTIK6OOVKAjSflrTOUeiUhoVJz_R8gx826rzuk0j5ECLCTu5E6qyWs8FKOPui3VtP9VSw07i_DkBwJJ/pub?output=csv")
   .then(r => r.text())
-  .then(csv => {
-    const line = csv.trim().split("\n")[1];
+  .then(txt => {
+    const start = txt.indexOf("{");
+    const end = txt.lastIndexOf("}");
+    if (start === -1 || end === -1 || end <= start) {
+      throw new Error("Could not find JSON braces in published sheet output");
+    }
 
-    // everything after the first comma is the JSON
-    const jsonString = line.substring(line.indexOf(",") + 1)
-      .replace(/^"/, "")
-      .replace(/"$/, "")
-      .replace(/""/g, '"');
+    let jsonString = txt.slice(start, end + 1);
+
+    // Google CSV output may double quotes inside fields
+    jsonString = jsonString.replace(/""/g, '"');
 
     const data = JSON.parse(jsonString);
     window.EVEREST_DATA = data;
@@ -269,8 +262,10 @@ fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vTIK6OOVKAjSflrTOUeiUhoVJ
   .catch(err => console.error("GOOGLE SHEETS LOAD FAILED", err));
 </script>
 
+
 </body>
 
 </html>
+
 
 
