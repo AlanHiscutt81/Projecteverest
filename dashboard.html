@@ -207,20 +207,27 @@
 </div>
 
 <script>
+// We simplified this! We no longer need the 'extractFirstJsonObject' function.
+
 fetch("https://docs.google.com/spreadsheets/d/1WvEFHXZrjS3czyjedOLKCcxz6Agt26pTPR33B23kQLo/gviz/tq?tqx=out:json")
-  .then(res => res.text())
-  .then(text => {
-    // This line cleans up the "junk" Google adds to the start and end
-    const jsonString = text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1);
-    const data = JSON.parse(jsonString);
+  .then(response => response.text())
+  .then(responseText => {
+    // 1. Google adds '/*O_o*/ google.visualization.Query.setResponse(' to the start.
+    // 2. This line finds the first '{' and the last '}' to get ONLY the data.
+    const start = responseText.indexOf('{');
+    const end = responseText.lastIndexOf('}') + 1;
+    const cleanJson = responseText.substring(start, end);
+
+    // 3. Now we turn that clean text into a real Javascript object
+    const data = JSON.parse(cleanJson);
     
-    // This saves your data so the rest of your dashboard can use it
+    // 4. Save it so your dashboard can use it
     window.EVEREST_DATA = data;
 
-    console.log("EVEREST DATA LOADED FROM GOOGLE SHEETS", data);
+    console.log("SUCCESS: EVEREST DATA LOADED", data);
   })
   .catch(err => {
-    console.error("GOOGLE SHEETS LOAD FAILED", err);
+    console.error("FAILED TO LOAD DATA:", err);
   });
 </script>
 
@@ -229,6 +236,7 @@ fetch("https://docs.google.com/spreadsheets/d/1WvEFHXZrjS3czyjedOLKCcxz6Agt26pTP
 </body>
 
 </html>
+
 
 
 
