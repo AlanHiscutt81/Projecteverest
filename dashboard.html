@@ -206,51 +206,40 @@
   </div>
 </div>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-  import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyC1ty6QkEVV_peEMYm6dGxw1rTFHferZs",
-    authDomain: "everest-project-589d2.firebaseapp.com",
-    projectId: "everest-project-589d2",
-    storageBucket: "everest-project-589d2.firebasestorage.app",
-    messagingSenderId: "913106678619",
-    appId: "1:913106678619:web:50984fe3206f1f0c9f207e"
-  };
-
-  // IMPORTANT: paste your Firestore document ID from collection "shared" here:
-  const DOC_ID = "5VeAsGk1ayJveT6mG4Sr";
-
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const ref = doc(db, "shared", DOC_ID);
-
-  onSnapshot(ref, (snap) => {
-    const data = snap.data() || {};
-    document.getElementById("rt_value").textContent = data.message ?? "(empty)";
-  });
-
-  document.getElementById("rt_send").addEventListener("click", async () => {
-    const msg = document.getElementById("rt_input").value.trim();
-    if (!msg) return;
-    await setDoc(ref, { message: msg }, { merge: true });
-    document.getElementById("rt_input").value = "";
-  });
-</script>
-<!-- ===== END DEMO BLOCK ===== -->
 <script>
+function extractFirstJsonObject(text) {
+  let inString = false;
+  let escape = false;
+  let depth = 0;
+  let start = -1;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+
+    if (escape) { escape = false; continue; }
+    if (ch === "\\") { if (inString) escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+
+    if (ch === "{") {
+      if (depth === 0) start = i;
+      depth++;
+    } else if (ch === "}") {
+      depth--;
+      if (depth === 0 && start !== -1) {
+        return text.slice(start, i + 1);
+      }
+    }
+  }
+  throw new Error("No complete JSON object found in sheet output");
+}
+
 fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vTIK6OOVKAjSflrTOUeiUhoVJz_R8gx826rzuk0j5ECLCTu5E6qyWs8FKOPui3VtP9VSw07i_DkBwJJ/pub?output=csv")
   .then(r => r.text())
   .then(txt => {
-    const start = txt.indexOf("{");
-    const end = txt.lastIndexOf("}");
-    if (start === -1 || end === -1) {
-      throw new Error("JSON not found in sheet output");
-    }
-
-    let jsonString = txt.slice(start, end + 1);
-    jsonString = jsonString.replace(/""/g, '"');
+    // Google CSV output may double quotes inside fields
+    const cleaned = txt.replace(/""/g, '"');
+    const jsonString = extractFirstJsonObject(cleaned);
 
     const data = JSON.parse(jsonString);
     window.EVEREST_DATA = data;
@@ -265,6 +254,7 @@ fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vTIK6OOVKAjSflrTOUeiUhoVJ
 </body>
 
 </html>
+
 
 
 
