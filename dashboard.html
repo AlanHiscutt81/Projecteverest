@@ -234,7 +234,7 @@ function extractFirstJsonObject(text) {
   throw new Error("No complete JSON object found in sheet output");
 }
 
-fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vTIK6OOVKAjSflrTOUeiUhoVJz_R8gx826rzuk0j5ECLCTu5E6qyWs8FKOPui3VtP9VSw07i_DkBwJJ/pub?output=csv")
+fetch("https://docs.google.com/spreadsheets/d/1WvEFHXZrjS3czyjedOLKCcxz6Agt26pTPR33B23kQLo/gviz/tq?tqx=out:json")
   .then(r => r.text())
   .then(txt => {
     // Google CSV output may double quotes inside fields
@@ -254,6 +254,7 @@ fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vTIK6OOVKAjSflrTOUeiUhoVJ
 </body>
 
 </html>
+
 
 
 
