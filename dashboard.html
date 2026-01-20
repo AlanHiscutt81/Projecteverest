@@ -248,6 +248,25 @@ fetch("https://docs.google.com/spreadsheets/d/https://docs.google.com/spreadshee
   })
   .catch(err => console.error("Sheet error:", err));
 </script>
+<script>
+fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vTIK6OOVKAjSflrTOUeiUhoVJz_R8gx826rzuk0j5ECLCTu5E6qyWs8FKOPui3VtP9VSw07i_DkBwJJ/pub?output=csv")
+  .then(r => r.text())
+  .then(csv => {
+    const lines = csv.trim().split("\n");
+    const headers = lines[0].split(",");
+    const values = lines[1].split(",");
+
+    const row = {};
+    headers.forEach((h, i) => row[h.trim()] = values[i]);
+
+    const data = JSON.parse(row.json);
+    window.EVEREST_DATA = data;
+
+    console.log("EVEREST DATA LOADED FROM GOOGLE SHEETS", data);
+  })
+  .catch(err => console.error("GOOGLE SHEETS LOAD FAILED", err));
+</script>
 
 </body>
+
 </html>
