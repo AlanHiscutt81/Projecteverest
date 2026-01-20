@@ -245,13 +245,11 @@ fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vTIK6OOVKAjSflrTOUeiUhoVJ
   .then(txt => {
     const start = txt.indexOf("{");
     const end = txt.lastIndexOf("}");
-    if (start === -1 || end === -1 || end <= start) {
-      throw new Error("Could not find JSON braces in published sheet output");
+    if (start === -1 || end === -1) {
+      throw new Error("JSON not found in sheet output");
     }
 
     let jsonString = txt.slice(start, end + 1);
-
-    // Google CSV output may double quotes inside fields
     jsonString = jsonString.replace(/""/g, '"');
 
     const data = JSON.parse(jsonString);
@@ -263,9 +261,11 @@ fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vTIK6OOVKAjSflrTOUeiUhoVJ
 </script>
 
 
+
 </body>
 
 </html>
+
 
 
 
