@@ -66,6 +66,10 @@
                                 <option value="accrue">Accrue</option>
                             </select>
                         </div>
+                        <div class="flex items-center gap-2 pt-1">
+                            <input type="checkbox" id="pensionEnroll" class="w-4 h-4 accent-blue-600">
+                            <label for="pensionEnroll" class="text-[9px] font-black uppercase text-blue-600">Auto-Enroll Pension</label>
+                        </div>
                     </div>
 
                     <div class="bg-slate-50 p-4 rounded-2xl border space-y-2">
@@ -92,7 +96,8 @@
     <div id="printArea" class="hidden bg-white max-w-[800px] mx-auto my-10 shadow-2xl p-16 border-8 border-slate-200"></div>
 
     <script>
-        const STAFF_KEY = 'everest_v5_final';
+        // RESTORED ORIGINAL KEY
+        const STAFF_KEY = 'everest_v5_final'; 
         const SHIFT_KEY = 'ev_shifts_master';
         let showingArchived = false;
 
@@ -166,6 +171,7 @@
                 leavingDate: document.getElementById('leavingDate').value,
                 taxCode: document.getElementById('taxCode').value.toUpperCase(),
                 holidayTreatment: document.getElementById('holidayTreatment').value,
+                pensionEnroll: document.getElementById('pensionEnroll').checked, // PENSION SAVING
                 status: editId ? staff.find(s=>s.id===editId).status : 'active',
                 rates: {
                     wdD: document.getElementById('wdD').value, wdN: document.getElementById('wdN').value,
@@ -191,6 +197,7 @@
             document.getElementById('startDate').value = p.startDate;
             document.getElementById('leavingDate').value = p.leavingDate || "";
             document.getElementById('taxCode').value = p.taxCode;
+            document.getElementById('pensionEnroll').checked = p.pensionEnroll || false; // PENSION LOADING
             ['wdD','wdN','weD','weN','bhD','bhN'].forEach(r => document.getElementById(r).value = p.rates[r]);
             document.getElementById('formTitle').innerText = "Edit: " + p.name;
             document.getElementById('cancelBtn').classList.remove('hidden');
@@ -200,6 +207,7 @@
         function resetUI() {
             document.getElementById('staffId').value = "";
             document.querySelectorAll('input, textarea').forEach(i => i.value = "");
+            document.getElementById('pensionEnroll').checked = false; // PENSION RESET
             document.getElementById('formTitle').innerText = "Personnel Details";
             document.getElementById('cancelBtn').classList.add('hidden');
         }
