@@ -2,51 +2,285 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Everest Agency - Pro Command</title>
+    <title>Everest - Shift Manager</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .custom-scroll::-webkit-scrollbar { width: 4px; }
-        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
-    </style>
 </head>
-<body class="bg-slate-100 p-4 font-sans text-slate-900">
-    <div class="max-w-[1400px] mx-auto">
+<body class="bg-slate-100 p-8 font-sans text-slate-900">
+    <div class="max-w-[1500px] mx-auto">
         
-        <div class="flex justify-between items-center mb-6 bg-blue-900 p-6 rounded-2xl shadow-xl text-white border-b-4 border-blue-600">
-            <div>
-                <h1 class="text-2xl font-black uppercase tracking-widest italic">Everest Command</h1>
-                <p class="text-blue-300 text-[10px] font-bold uppercase tracking-widest">Revenue & Shift Control</p>
+        <nav class="flex gap-4 mb-6">
+            <a href="dashboard.html" class="bg-blue-900 text-white px-6 py-2 rounded-full text-[10px] font-black uppercase shadow-lg">Dashboard</a>
+            <a href="Staff.html" class="bg-white text-slate-400 px-6 py-2 rounded-full text-[10px] font-black uppercase border hover:bg-blue-50">Staff</a>
+            <a href="Homes.html" class="bg-white text-slate-400 px-6 py-2 rounded-full text-[10px] font-black uppercase border hover:bg-blue-50">Homes</a>
+            <a href="calendar.html" class="bg-white text-slate-400 px-6 py-2 rounded-full text-[10px] font-black uppercase border hover:bg-blue-50">Calendar</a>
+            <a href="payroll.html" class="bg-white text-slate-400 px-6 py-2 rounded-full text-[10px] font-black uppercase border hover:bg-blue-50">Payroll</a>
+            <a href="invoices.html" class="bg-white text-slate-400 px-6 py-2 rounded-full text-[10px] font-black uppercase border hover:bg-blue-50">Invoicing</a>
+        </nav>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <div class="bg-white p-8 rounded-[40px] shadow-xl border-t-8 border-orange-500 h-fit">
+                <h3 class="font-black uppercase text-[10px] mb-6 text-orange-600 italic tracking-widest text-center">1. Request Vacancy</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-[9px] font-black uppercase text-slate-400 ml-2">Select Home</label>
+                        <select id="homeSelect" class="w-full p-4 border-2 rounded-2xl font-black bg-slate-50 outline-none focus:border-orange-500"></select>
+                    </div>
+                    <div>
+                        <label class="text-[9px] font-black uppercase text-slate-400 ml-2">Date</label>
+                        <input id="shiftDate" type="date" class="w-full p-4 border-2 rounded-2xl font-bold bg-slate-50">
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[9px] font-black uppercase text-slate-400 ml-1">Start Time</label>
+                            <input id="startTime" type="time" class="w-full p-4 border-2 rounded-2xl font-black bg-white text-sm">
+                        </div>
+                        <div>
+                            <label class="text-[9px] font-black uppercase text-slate-400 ml-1">End Time</label>
+                            <input id="endTime" type="time" class="w-full p-4 border-2 rounded-2xl font-black bg-white text-sm">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <select id="roleReq" class="w-full p-4 border-2 rounded-2xl font-black bg-slate-50">
+                            <option value="HCA">HCA</option>
+                            <option value="RGN">RGN</option>
+                        </select>
+                        <select id="shiftType" class="w-full p-4 border-2 rounded-2xl font-black bg-slate-50">
+                            <option value="Day">Day</option>
+                            <option value="Night">Night</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-3 p-4 bg-red-50 rounded-2xl border-2 border-red-100">
+                        <input type="checkbox" id="isBH" class="w-5 h-5 accent-red-600">
+                        <label for="isBH" class="text-[10px] font-black uppercase text-red-700">Bank Holiday Rate</label>
+                    </div>
+                    
+                    <button onclick="createShift()" class="w-full bg-orange-600 text-white py-5 rounded-3xl font-black uppercase shadow-xl hover:bg-black transition text-lg tracking-tighter">Add to Rota</button>
+                </div>
             </div>
-            <div class="text-right bg-blue-800 p-3 rounded-xl border border-blue-700">
-                <span class="text-[10px] block text-blue-300 uppercase font-black">Projected Billing</span>
-                <span id="totalRev" class="text-2xl font-mono font-bold text-green-400">£0.00</span>
+
+            <div class="lg:col-span-3">
+                <div class="bg-white p-4 rounded-[30px] shadow-sm mb-6 flex items-center justify-between border border-slate-200">
+                    <h2 class="text-sm font-black uppercase text-slate-400 ml-4 italic">Active Rota</h2>
+                    <div class="flex items-center gap-3">
+                        <label class="text-[9px] font-black uppercase text-slate-400">Filter Range:</label>
+                        <input type="date" id="filterStart" onchange="renderRota()" class="p-2 border rounded-xl text-xs font-bold outline-none focus:border-blue-900">
+                        <span class="text-slate-300 font-bold">to</span>
+                        <input type="date" id="filterEnd" onchange="renderRota()" class="p-2 border rounded-xl text-xs font-bold outline-none focus:border-blue-900">
+                    </div>
+                </div>
+
+                <div id="rotaDisplay" class="space-y-4"></div>
             </div>
         </div>
+    </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <script>
+        const STAFF_KEY = 'everest_v5_final';
+        const HOME_KEY = 'ev_homes_db'; 
+        const SHIFT_KEY = 'ev_shifts_master';
+
+        function init() {
+            const now = new Date();
+            const start = new Date(); start.setDate(now.getDate() - 7);
+            const end = new Date(); end.setDate(now.getDate() + 14);
             
-            <div class="lg:col-span-4 space-y-4 max-h-[85vh] overflow-y-auto pr-2 custom-scroll">
+            document.getElementById('filterStart').value = start.toISOString().split('T')[0];
+            document.getElementById('filterEnd').value = end.toISOString().split('T')[0];
+
+            loadHomeDropdown();
+            renderRota();
+        }
+
+        function loadHomeDropdown() {
+            const homes = JSON.parse(localStorage.getItem(HOME_KEY)) || [];
+            const select = document.getElementById('homeSelect');
+            const uniqueHomeNames = [...new Set(homes.map(h => h.name))];
+            
+            select.innerHTML = uniqueHomeNames.length 
+                ? uniqueHomeNames.map(name => `<option value="${name}">${name}</option>`).join('')
+                : '<option value="">Registry Empty</option>';
+        }
+
+        // Helper for duration calculation
+        function getShiftHours(startStr, endStr) {
+            if(!startStr || !endStr) return 0;
+            const [sH, sM] = startStr.split(':').map(Number);
+            const [eH, eM] = endStr.split(':').map(Number);
+            let dur = (eH + eM/60) - (sH + sM/60);
+            return dur < 0 ? dur + 24 : dur;
+        }
+
+        function createShift() {
+            const date = document.getElementById('shiftDate').value;
+            const start = document.getElementById('startTime').value;
+            const end = document.getElementById('endTime').value;
+            
+            if(!date || !start || !end) return alert("Please input Date, Start Time and End Time.");
+            
+            const shifts = JSON.parse(localStorage.getItem(SHIFT_KEY)) || [];
+            shifts.push({
+                id: "SHFT-" + Date.now(),
+                home: document.getElementById('homeSelect').value,
+                date: date,
+                start: start,
+                end: end,
+                role: document.getElementById('roleReq').value,
+                shiftType: document.getElementById('shiftType').value,
+                isBH: document.getElementById('isBH').checked,
+                staffId: null,
+                status: 'requested'
+            });
+            localStorage.setItem(SHIFT_KEY, JSON.stringify(shifts));
+            renderRota();
+        }
+
+        // THE CORE UPDATE LOGIC WITH HARD BLOCK
+        function updateShift(id, data) {
+            let shifts = JSON.parse(localStorage.getItem(SHIFT_KEY)) || [];
+            const staffList = JSON.parse(localStorage.getItem(STAFF_KEY)) || [];
+
+            // --- VISA LIMIT BLOCK ---
+            if (data.staffId && data.staffId !== "") {
+                const staff = staffList.find(s => String(s.id) === String(data.staffId));
+                const targetShift = shifts.find(s => String(s.id) === String(id));
                 
-                <div class="bg-white p-5 rounded-2xl shadow-sm border-t-4 border-orange-500">
-                    <h3 class="font-black text-xs uppercase mb-4 text-orange-600 italic">1. Setup Home & Rates</h3>
-                    <input id="hName" type="text" placeholder="Home Name" class="w-full p-2 border rounded mb-3 text-sm font-bold">
+                // This now matches 'hourCap' from your Staff Registry
+                const cap = parseFloat(staff?.hourCap) || 0;
+
+                if (staff && cap > 0) {
+                    const d = new Date(targetShift.date);
+                    const day = d.getDay();
+                    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+                    const monDate = new Date(new Date(targetShift.date).setDate(diff));
+                    const mon = monDate.toISOString().split('T')[0];
                     
-                    <div class="grid grid-cols-2 gap-2 text-[9px] font-black uppercase text-slate-400 mb-2">
-                        <span>HCA Rates (£)</span><span>RGN Rates (£)</span>
+                    const sunDate = new Date(monDate);
+                    sunDate.setDate(monDate.getDate() + 6);
+                    const sun = sunDate.toISOString().split('T')[0];
+
+                    const newShiftDur = getShiftHours(targetShift.start, targetShift.end);
+                    
+                    const weeklyTotal = shifts.reduce((total, s) => {
+                        if (String(s.staffId) === String(data.staffId) && 
+                            String(s.id) !== String(id) && 
+                            s.date >= mon && s.date <= sun && 
+                            s.status !== 'cancelled') {
+                            return total + getShiftHours(s.start, s.end);
+                        }
+                        return total;
+                    }, 0);
+
+                    if ((weeklyTotal + newShiftDur) > cap) {
+                        alert(`🛑 VISA LIMIT REACHED\n\nStaff: ${staff.name}\nLimit: ${cap}h/week\nAlready Booked: ${weeklyTotal.toFixed(2)}h\nThis Shift: ${newShiftDur.toFixed(2)}h\n\nAssignment Blocked.`);
+                        renderRota();
+                        return; 
+                    }
+                }
+            }
+
+            const idx = shifts.findIndex(s => String(s.id) === String(id));
+            if(idx === -1) return;
+            shifts[idx] = {...shifts[idx], ...data};
+            localStorage.setItem(SHIFT_KEY, JSON.stringify(shifts));
+            renderRota();
+        } // <--- UPDATE SHIFT ENDS HERE
+
+        function cancelShift(id) {
+            if(!confirm("Cancel this shift?")) return;
+            updateShift(id, { status: 'cancelled' });
+        }
+
+        function deleteShift(id) {
+            if(!confirm("Permanently DELETE this shift?")) return;
+            let ss = JSON.parse(localStorage.getItem(SHIFT_KEY)) || [];
+            localStorage.setItem(SHIFT_KEY, JSON.stringify(ss.filter(x => String(x.id) !== String(id))));
+            renderRota();
+        }
+
+        function sendBulkConfirmation(staffId) {
+            let shifts = JSON.parse(localStorage.getItem(SHIFT_KEY)) || [];
+            const staff = JSON.parse(localStorage.getItem(STAFF_KEY)) || [];
+            const p = staff.find(x => String(x.id) === String(staffId));
+            
+            if (!p || !p.phone) return alert("No phone number found for staff.");
+
+            const staffShifts = shifts.filter(s => String(s.staffId) === String(staffId) && s.status === 'assigned');
+            if(staffShifts.length === 0) return alert("No assigned shifts to confirm.");
+
+            staffShifts.sort((a,b) => new Date(a.date) - new Date(b.date));
+            let msg = `Confirmed Shifts for Everest:\n\n`;
+            staffShifts.forEach(s => {
+                const d = new Date(s.date).toLocaleDateString('en-GB', {weekday: 'short', day: 'numeric', month: 'short'});
+                msg += `${s.home}: ${s.start}-${s.end} (${d})\n`;
+                const idx = shifts.findIndex(x => String(x.id) === String(s.id));
+                shifts[idx].status = 'confirmed';
+            });
+            msg += `\nThank you.`;
+
+            window.location.href = `sms:${p.phone}?&body=${encodeURIComponent(msg)}`;
+            localStorage.setItem(SHIFT_KEY, JSON.stringify(shifts));
+            renderRota();
+        }
+
+        function renderRota() {
+            const shifts = JSON.parse(localStorage.getItem(SHIFT_KEY)) || [];
+            const staff = JSON.parse(localStorage.getItem(STAFF_KEY)) || [];
+            const container = document.getElementById('rotaDisplay');
+            
+            const filterStart = document.getElementById('filterStart').value;
+            const filterEnd = document.getElementById('filterEnd').value;
+
+            const filteredShifts = shifts.filter(s => {
+                const inRange = (!filterStart || !filterEnd) || (s.date >= filterStart && s.date <= filterEnd);
+                return inRange && s.status !== 'completed' && s.status !== 'cancelled';
+            });
+
+            if(!filteredShifts.length) {
+                container.innerHTML = `<div class="p-20 text-center text-slate-300 font-black uppercase italic border-4 border-dashed rounded-[40px]">No active shifts in range</div>`;
+                return;
+            }
+
+            filteredShifts.sort((a,b) => new Date(b.date) - new Date(a.date));
+
+            container.innerHTML = filteredShifts.map(s => {
+                const isAssigned = s.status === 'assigned';
+                const isConfirmed = s.status === 'confirmed';
+
+                return `
+                <div class="p-6 rounded-[35px] border-2 bg-white flex items-center justify-between mb-4 ${isConfirmed ? 'border-blue-500 shadow-lg ring-4 ring-blue-50' : 'border-slate-100'}">
+                    <div class="flex items-center gap-6">
+                        <div class="bg-slate-100 p-4 rounded-3xl text-center min-w-[75px]">
+                            <p class="text-[10px] font-black text-blue-600 uppercase leading-none mb-1">${new Date(s.date).toLocaleDateString('en-GB', {weekday: 'short'})}</p>
+                            <p class="text-2xl font-black">${new Date(s.date).getDate()}</p>
+                        </div>
+                        <div>
+                            <p class="text-[9px] font-black text-orange-500 uppercase tracking-widest mb-1">${s.home} ${s.isBH ? '• BH' : ''}</p>
+                            <h4 class="font-black text-lg uppercase">${s.role} | ${s.start} - ${s.end}</h4>
+                            <span class="text-[8px] font-black px-2 py-0.5 rounded-full uppercase bg-slate-200">${s.status}</span>
+                        </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-2 mb-4">
-                        <input id="hD" type="number" placeholder="Wkdy Day" class="p-2 border rounded text-xs">
-                        <input id="nD" type="number" placeholder="Wkdy Day" class="p-2 border rounded text-xs">
-                        <input id="hN" type="number" placeholder="Wkdy Ngt" class="p-2 border rounded text-xs">
-                        <input id="nN" type="number" placeholder="Wkdy Ngt" class="p-2 border rounded text-xs">
-                        <input id="hWD" type="number" placeholder="Wknd Day" class="p-2 border rounded text-xs bg-orange-50">
-                        <input id="nWD" type="number" placeholder="Wknd Day" class="p-2 border rounded text-xs bg-orange-50">
-                        <input id="hWN" type="number" placeholder="Wknd Ngt" class="p-2 border rounded text-xs bg-orange-50">
-                        <input id="nWN" type="number" placeholder="Wknd Ngt" class="p-2 border rounded text-xs bg-orange-50">
-                        <input id="hBH" type="number" placeholder="BH Day" class="p-2 border rounded text-xs bg-yellow-50">
-                        <input id="nBH" type="number" placeholder="BH Day" class="p-2 border rounded text-xs bg-yellow-50">
-                        <input id="hBHN" type="number" placeholder="BH Ngt" class="p-2 border rounded text-xs bg-yellow-50">
-                        <input id="nBHN" type="number" placeholder="BH Ngt" class="p-2 border rounded text-xs bg-yellow-50">
+
+                    <div class="flex items-center gap-3">
+                        <select onchange="updateShift('${s.id}', {staffId: this.value, status: this.value ? 'assigned' : 'requested'})" class="p-4 border-2 rounded-2xl font-black text-xs bg-slate-50 min-w-[180px]">
+                            <option value="">-- ASSIGN STAFF --</option>
+                            ${staff.filter(st => st.role === s.role).map(st => `<option value="${st.id}" ${String(s.staffId) === String(st.id) ? 'selected' : ''}>${st.name} ${st.visaCap > 0 ? '(CAP: '+st.visaCap+'h)' : ''}</option>`).join('')}
+                        </select>
+
+                        ${isAssigned ? `<button onclick="sendBulkConfirmation('${s.staffId}')" class="bg-blue-600 text-white px-4 py-4 rounded-2xl text-[10px] font-black uppercase shadow-lg">Confirm</button>` : ''}
+                        ${isConfirmed ? `<button onclick="updateShift('${s.id}', {status: 'completed'})" class="bg-green-600 text-white px-4 py-4 rounded-2xl text-[10px] font-black uppercase shadow-lg">Complete</button>` : ''}
+                        
+                        <button onclick="cancelShift('${s.id}')" class="bg-red-50 text-red-500 px-4 py-4 rounded-2xl text-[10px] font-black uppercase border border-red-100 hover:bg-red-500 hover:text-white transition">Cancel</button>
+                        
+                        <button onclick="deleteShift('${s.id}')" class="text-slate-200 hover:text-slate-400 px-2 font-black">✕</button>
                     </div>
-                    <button onclick="addHome()" class="w-
+                </div>`;
+            }).join('');
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
