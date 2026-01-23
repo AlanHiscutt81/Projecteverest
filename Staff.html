@@ -1,20 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8"><title>Everest - Staff Registry</title>
+    <meta charset="UTF-8">
+    <title>Everest - Master Staff Registry (Role & Compliance)</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print { .no-print { display: none !important; } #printArea { display: block !important; border: none; } }
+        .staff-card { transition: all 0.3s ease; }
+    </style>
 </head>
 <body class="bg-slate-100 p-8 font-sans text-slate-900">
-    <div class="max-w-[1500px] mx-auto">
+    <div class="max-w-[1600px] mx-auto no-print">
         
         <div class="bg-[#1e3a8a] p-8 rounded-[40px] text-white flex justify-between items-center mb-8 shadow-2xl">
             <div>
                 <h1 class="text-4xl font-black uppercase italic tracking-tighter">Staff Registry</h1>
-                <a href="dashboard.html" class="text-blue-200 text-[10px] font-black uppercase underline hover:text-white">← Back to Dashboard</a>
+                <div class="flex gap-4 mt-2">
+                    <a href="dashboard.html" class="text-blue-200 text-[10px] font-black uppercase underline hover:text-white">← Back to Dashboard</a>
+                    <button onclick="toggleArchiveView()" id="archiveToggleBtn" class="text-orange-300 text-[10px] font-black uppercase underline">View Archived Staff</button>
+                </div>
             </div>
             <div class="bg-blue-900 p-4 rounded-3xl border border-blue-700 text-center min-w-[140px]">
                 <span id="staffCount" class="text-white text-xl font-mono font-black text-green-400">0</span>
-                <p class="text-blue-300 text-[8px] font-black uppercase block tracking-widest">Active Records</p>
+                <p class="text-blue-300 text-[8px] font-black uppercase block tracking-widest">Active Personnel</p>
             </div>
         </div>
 
@@ -24,45 +32,56 @@
                 <div class="space-y-4">
                     <input type="hidden" id="staffId" value="">
                     
-                    <input id="name" type="text" placeholder="Full Name" class="w-full p-3 border-2 rounded-xl font-black bg-slate-50 outline-none focus:border-green-500">
+                    <div class="grid grid-cols-1 gap-2">
+                        <input id="name" type="text" placeholder="Full Name" class="w-full p-3 border-2 rounded-xl font-black bg-slate-50 outline-none focus:border-green-500">
+                        <select id="role" class="w-full p-3 border-2 rounded-xl font-black bg-green-50 text-green-800 uppercase text-xs outline-none focus:border-green-500">
+                            <option value="HCA">HCA (Health Care Assistant)</option>
+                            <option value="RGN">RGN (Registered Nurse)</option>
+                            <option value="SHCA">Senior HCA</option>
+                        </select>
+                    </div>
+                    
+                    <textarea id="address" placeholder="Residential Address" class="w-full p-3 border-2 rounded-xl font-bold bg-slate-50 text-xs h-16 outline-none focus:border-green-500"></textarea>
+
                     <div class="grid grid-cols-2 gap-2">
-                        <input id="phone" type="tel" placeholder="Phone" class="w-full p-3 border-2 rounded-xl font-bold bg-slate-50 text-xs">
-                        <input id="email" type="email" placeholder="Email" class="w-full p-3 border-2 rounded-xl font-bold bg-slate-50 text-xs">
+                        <input id="phone" type="tel" placeholder="Phone" class="w-full p-3 border-2 rounded-xl font-bold bg-slate-50 text-[10px]">
+                        <input id="niNumber" type="text" placeholder="NI Number" class="w-full p-3 border-2 rounded-xl font-bold bg-slate-50 text-[10px] uppercase">
                     </div>
 
-                    <select id="role" class="w-full p-3 border-2 rounded-xl font-black bg-green-50 text-green-800">
-                        <option value="HCA">HCA</option>
-                        <option value="RGN">RGN</option>
-                    </select>
+                    <div class="bg-orange-50 p-4 rounded-2xl border border-orange-200">
+                        <label class="text-[9px] font-black uppercase text-orange-600 block mb-1 tracking-widest">Visa / Sponsorship Cap</label>
+                        <input id="hourCap" type="number" placeholder="Weekly Hour Limit (0 = None)" class="w-full p-2 border-2 border-orange-200 rounded-lg font-black text-xs outline-none focus:border-orange-500">
+                    </div>
 
                     <div class="bg-blue-50 p-4 rounded-2xl border border-blue-100 space-y-3">
-                        <label class="text-[9px] font-black uppercase text-blue-400 block border-b border-blue-100 pb-1">Statutory Details</label>
-                        <div class="space-y-2">
-                            <div>
-                                <p class="text-[7px] font-black uppercase text-blue-500 mb-1">Tax Code</p>
-                                <input id="taxCode" type="text" placeholder="1257L" class="w-full p-2 border rounded-lg font-bold text-xs">
-                            </div>
-                            <div class="flex items-center gap-2 pt-1">
-                                <input type="checkbox" id="pensionToggle" class="w-4 h-4 accent-blue-600">
-                                <label for="pensionToggle" class="text-[9px] font-black uppercase text-blue-700">Auto-Enrol Pension</label>
-                            </div>
+                        <label class="text-[9px] font-black uppercase text-blue-400 block border-b pb-1">Employment Dates</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div><p class="text-[7px] font-black uppercase text-blue-500">Start</p><input id="startDate" type="date" class="w-full p-2 border rounded-lg text-[10px]"></div>
+                            <div><p class="text-[7px] font-black uppercase text-red-500">Leave</p><input id="leavingDate" type="date" class="w-full p-2 border rounded-lg text-[10px]"></div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input id="taxCode" type="text" placeholder="Tax Code" class="w-full p-2 border rounded-lg font-bold text-[10px] uppercase">
+                            <select id="holidayTreatment" class="w-full p-2 border rounded-lg font-bold text-[10px]">
+                                <option value="pay">Pay Weekly</option>
+                                <option value="accrue">Accrue</option>
+                            </select>
                         </div>
                     </div>
 
-                    <div class="bg-slate-50 p-4 rounded-2xl border space-y-3">
-                        <label class="text-[9px] font-black uppercase text-slate-400 block border-b pb-1">Pay Matrix (£)</label>
+                    <div class="bg-slate-50 p-4 rounded-2xl border space-y-2">
+                        <label class="text-[9px] font-black uppercase text-slate-400 block border-b pb-1">Pay Rates (£/hr)</label>
                         <div class="grid grid-cols-2 gap-2">
-                            <div><p class="text-[7px] font-black uppercase text-slate-400">WD Day</p><input id="wdD" type="number" step="0.01" class="w-full p-2 border rounded-lg font-bold text-xs"></div>
-                            <div><p class="text-[7px] font-black uppercase text-slate-400">WD Night</p><input id="wdN" type="number" step="0.01" class="w-full p-2 border rounded-lg font-bold text-xs"></div>
-                            <div><p class="text-[7px] font-black uppercase text-blue-500">WE Day</p><input id="weD" type="number" step="0.01" class="w-full p-2 border rounded-lg font-bold text-xs"></div>
-                            <div><p class="text-[7px] font-black uppercase text-blue-500">WE Night</p><input id="weN" type="number" step="0.01" class="w-full p-2 border rounded-lg font-bold text-xs"></div>
-                            <div><p class="text-[7px] font-black uppercase text-red-500">BH Day</p><input id="bhD" type="number" step="0.01" class="w-full p-2 border rounded-lg font-bold text-xs"></div>
-                            <div><p class="text-[7px] font-black uppercase text-red-500">BH Night</p><input id="bhN" type="number" step="0.01" class="w-full p-2 border rounded-lg font-bold text-xs"></div>
+                            <input id="wdD" type="number" step="0.01" placeholder="WD Day" class="p-2 border rounded-lg text-[10px] font-bold">
+                            <input id="wdN" type="number" step="0.01" placeholder="WD Night" class="p-2 border rounded-lg text-[10px] font-bold">
+                            <input id="weD" type="number" step="0.01" placeholder="WE Day" class="p-2 border rounded-lg text-[10px] font-bold border-blue-200">
+                            <input id="weN" type="number" step="0.01" placeholder="WE Night" class="p-2 border rounded-lg text-[10px] font-bold border-blue-200">
+                            <input id="bhD" type="number" step="0.01" placeholder="BH Day" class="p-2 border rounded-lg text-[10px] font-bold border-orange-200">
+                            <input id="bhN" type="number" step="0.01" placeholder="BH Night" class="p-2 border rounded-lg text-[10px] font-bold border-orange-200">
                         </div>
                     </div>
                     
-                    <button onclick="saveRecord()" id="saveBtn" class="w-full bg-green-600 text-white py-4 rounded-2xl font-black uppercase shadow-xl hover:bg-black transition">Save Record</button>
-                    <button onclick="resetUI()" id="cancelBtn" class="w-full hidden mt-2 py-2 text-[10px] font-black uppercase text-slate-400 underline text-center">Cancel / New</button>
+                    <button onclick="saveRecord()" id="saveBtn" class="w-full bg-green-600 text-white py-4 rounded-2xl font-black uppercase shadow-xl hover:bg-black transition border-b-4 border-green-800">Save Record</button>
+                    <button onclick="resetUI()" id="cancelBtn" class="w-full hidden mt-2 py-2 text-[10px] font-black uppercase text-slate-400 underline text-center">Cancel Edit</button>
                 </div>
             </div>
 
@@ -70,123 +89,178 @@
         </div>
     </div>
 
-    <script>
-        const STORAGE_KEY = 'everest_v5_final';
+    <div id="printArea" class="hidden bg-white max-w-[800px] mx-auto my-10 shadow-2xl p-16 border-8 border-slate-200"></div>
 
-        function getStaff() {
-            return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    <script>
+        const STAFF_KEY = 'everest_v5_final';
+        const SHIFT_KEY = 'ev_shifts_master';
+        let showingArchived = false;
+
+        function getStaff() { return JSON.parse(localStorage.getItem(STAFF_KEY)) || []; }
+        function getShifts() { return JSON.parse(localStorage.getItem(SHIFT_KEY)) || []; }
+
+        function calculateTotalHours(id) {
+            const from = document.getElementById(`from_${id}`).value;
+            const to = document.getElementById(`to_${id}`).value;
+            if (!from || !to) return alert("Select start and end dates on the staff card first.");
+
+            const shifts = getShifts().filter(s => s.staffId === id && s.status === 'completed' && s.date >= from && s.date <= to);
+            let total = 0;
+            shifts.forEach(s => {
+                const [shH, shM] = s.start.split(':').map(Number);
+                const [ehH, ehM] = s.end.split(':').map(Number);
+                let d = (ehH + ehM/60) - (shH + shM/60);
+                if(d < 0) d += 24;
+                total += d;
+            });
+            alert(`Record Found: ${shifts.length} shifts.\nTotal Hours Worked: ${total.toFixed(2)} hrs.`);
         }
 
-        function resetUI() {
-            document.getElementById('staffId').value = "";
-            document.getElementById('name').value = "";
-            document.getElementById('phone').value = "";
-            document.getElementById('email').value = "";
-            document.getElementById('taxCode').value = "1257L";
-            document.getElementById('pensionToggle').checked = false;
-            ['wdD','wdN','weD','weN','bhD','bhN'].forEach(id => document.getElementById(id).value = "");
-            document.getElementById('formTitle').innerText = "Personnel Details";
-            document.getElementById('saveBtn').innerText = "Save Record";
-            document.getElementById('cancelBtn').classList.add('hidden');
+        function generateStatDoc(type, id) {
+            const s = getStaff().find(x => x.id === id);
+            const from = document.getElementById(`from_${id}`).value;
+            const to = document.getElementById(`to_${id}`).value;
+            
+            document.getElementById('printArea').innerHTML = `
+                <div class="text-center mb-10">
+                    <h1 class="text-5xl font-black uppercase underline">${type} DOCUMENT</h1>
+                    <p class="text-slate-500 mt-2 font-bold uppercase">Private & Confidential Statutory Record</p>
+                </div>
+                <div class="grid grid-cols-2 gap-8 mb-10 border-b-4 pb-10">
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase">Employee Details</p>
+                        <p class="text-xl font-black">${s.name}</p>
+                        <p class="text-sm font-bold">${s.role} | ${s.niNumber}</p>
+                        <p class="text-sm font-bold mt-1">${s.address}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[10px] font-black text-slate-400 uppercase">Tax & Period</p>
+                        <p class="text-lg font-bold">Tax Code: ${s.taxCode}</p>
+                        <p class="text-sm">Period: ${from || 'N/A'} to ${to || 'N/A'}</p>
+                    </div>
+                </div>
+                <div class="bg-slate-50 p-8 rounded-3xl border-2 border-black text-center">
+                    <p class="font-black uppercase text-xs">Statutory Certificate Issued</p>
+                    <p class="text-xs mt-4 italic">Issued by Everest Agency Human Resources.</p>
+                </div>
+                <div class="mt-12 flex gap-4 no-print">
+                    <button onclick="window.print()" class="bg-black text-white px-8 py-4 font-black rounded-xl">PRINT NOW</button>
+                    <button onclick="document.getElementById('printArea').classList.add('hidden')" class="bg-slate-200 px-8 py-4 font-black rounded-xl uppercase">Close</button>
+                </div>`;
+            document.getElementById('printArea').classList.remove('hidden');
+            window.scrollTo(0, document.body.scrollHeight);
         }
 
         function saveRecord() {
             let staff = getStaff();
             const editId = document.getElementById('staffId').value;
-            const name = document.getElementById('name').value.trim();
-            if(!name) return alert("Name is required");
-
-            const newRecord = {
-                id: editId || "USER-" + Date.now(),
-                name: name,
-                phone: document.getElementById('phone').value,
-                email: document.getElementById('email').value,
+            const record = {
+                id: editId || "ST-" + Date.now(),
+                name: document.getElementById('name').value,
                 role: document.getElementById('role').value,
-                taxCode: document.getElementById('taxCode').value || '1257L',
-                pension: document.getElementById('pensionToggle').checked,
+                address: document.getElementById('address').value,
+                phone: document.getElementById('phone').value,
+                niNumber: document.getElementById('niNumber').value.toUpperCase(),
+                hourCap: parseFloat(document.getElementById('hourCap').value) || 0,
+                startDate: document.getElementById('startDate').value,
+                leavingDate: document.getElementById('leavingDate').value,
+                taxCode: document.getElementById('taxCode').value.toUpperCase(),
+                holidayTreatment: document.getElementById('holidayTreatment').value,
+                status: editId ? staff.find(s=>s.id===editId).status : 'active',
                 rates: {
-                    wdD: document.getElementById('wdD').value || 0,
-                    wdN: document.getElementById('wdN').value || 0,
-                    weD: document.getElementById('weD').value || 0,
-                    weN: document.getElementById('weN').value || 0,
-                    bhD: document.getElementById('bhD').value || 0,
-                    bhN: document.getElementById('bhN').value || 0
+                    wdD: document.getElementById('wdD').value, wdN: document.getElementById('wdN').value,
+                    weD: document.getElementById('weD').value, weN: document.getElementById('weN').value,
+                    bhD: document.getElementById('bhD').value, bhN: document.getElementById('bhN').value
                 }
             };
-
-            if(editId) {
-                const idx = staff.findIndex(s => s.id === editId);
-                staff[idx] = newRecord;
-            } else {
-                staff.push(newRecord);
-            }
-
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(staff));
-            resetUI();
-            render();
+            if(editId) staff[staff.findIndex(s=>s.id===editId)] = record;
+            else staff.push(record);
+            localStorage.setItem(STAFF_KEY, JSON.stringify(staff));
+            resetUI(); render();
         }
 
         function editRecord(id) {
-            const person = getStaff().find(s => s.id === id);
-            if(!person) return;
-
-            document.getElementById('staffId').value = person.id;
-            document.getElementById('name').value = person.name;
-            document.getElementById('phone').value = person.phone;
-            document.getElementById('email').value = person.email;
-            document.getElementById('role').value = person.role;
-            document.getElementById('taxCode').value = person.taxCode || '1257L';
-            document.getElementById('pensionToggle').checked = person.pension || false;
-            
-            document.getElementById('wdD').value = person.rates.wdD;
-            document.getElementById('wdN').value = person.rates.wdN;
-            document.getElementById('weD').value = person.rates.weD;
-            document.getElementById('weN').value = person.rates.weN;
-            document.getElementById('bhD').value = person.rates.bhD;
-            document.getElementById('bhN').value = person.rates.bhN;
-
-            document.getElementById('formTitle').innerText = "Editing: " + person.name;
-            document.getElementById('saveBtn').innerText = "Confirm Update";
+            const p = getStaff().find(s => s.id === id);
+            document.getElementById('staffId').value = p.id;
+            document.getElementById('name').value = p.name;
+            document.getElementById('role').value = p.role;
+            document.getElementById('address').value = p.address;
+            document.getElementById('phone').value = p.phone;
+            document.getElementById('niNumber').value = p.niNumber;
+            document.getElementById('hourCap').value = p.hourCap;
+            document.getElementById('startDate').value = p.startDate;
+            document.getElementById('leavingDate').value = p.leavingDate || "";
+            document.getElementById('taxCode').value = p.taxCode;
+            ['wdD','wdN','weD','weN','bhD','bhN'].forEach(r => document.getElementById(r).value = p.rates[r]);
+            document.getElementById('formTitle').innerText = "Edit: " + p.name;
             document.getElementById('cancelBtn').classList.remove('hidden');
             window.scrollTo(0,0);
         }
 
-        function deleteRecord(id) {
-            if(confirm("Delete this person?")) {
-                const filtered = getStaff().filter(s => s.id !== id);
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
-                render();
-            }
+        function resetUI() {
+            document.getElementById('staffId').value = "";
+            document.querySelectorAll('input, textarea').forEach(i => i.value = "");
+            document.getElementById('formTitle').innerText = "Personnel Details";
+            document.getElementById('cancelBtn').classList.add('hidden');
         }
 
         function render() {
-            const staff = getStaff();
+            const staff = getStaff().filter(s => showingArchived ? s.status === 'archived' : s.status !== 'archived');
             document.getElementById('staffCount').innerText = staff.length;
-            const container = document.getElementById('staffDisplay');
-
-            container.innerHTML = staff.map(s => `
-                <div class="bg-white p-8 rounded-[40px] border shadow-sm flex flex-col justify-between hover:border-blue-500 transition-all">
-                    <div class="flex justify-between items-start mb-6">
+            document.getElementById('staffDisplay').innerHTML = staff.map(s => `
+                <div class="staff-card bg-white p-8 rounded-[40px] border-b-8 shadow-xl ${s.hourCap > 0 ? 'border-orange-500' : 'border-slate-300'}">
+                    <div class="flex justify-between items-start mb-4">
                         <div>
-                            <div class="font-black text-3xl uppercase tracking-tighter text-slate-800 leading-none">${s.name}</div>
-                            <div class="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-widest flex gap-3">
-                                <span>📞 ${s.phone || '-'}</span>
-                                <span class="text-blue-600">TAX: ${s.taxCode || '1257L'}</span>
-                                <span class="${s.pension ? 'text-green-600' : 'text-slate-300'}">PEN: ${s.pension ? 'YES' : 'NO'}</span>
-                            </div>
+                            <h2 class="font-black text-2xl uppercase tracking-tighter">${s.name}</h2>
+                            <span class="text-[10px] font-black text-blue-600 uppercase tracking-widest">${s.role}</span>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">NI: ${s.niNumber || 'REQUIRED'}</p>
                         </div>
-                        <span class="px-4 py-1.5 rounded-full bg-blue-900 text-white text-[10px] font-black uppercase">${s.role}</span>
+                        <span class="px-3 py-1 bg-blue-900 text-white rounded-full text-[8px] font-black uppercase">Since: ${s.startDate || 'N/A'}</span>
                     </div>
-                    <div class="grid grid-cols-3 gap-2 mb-6 text-center">
-                        <div class="bg-slate-50 p-2 rounded-xl border text-[10px] font-black">WD £${s.rates.wdD}/£${s.rates.wdN}</div>
-                        <div class="bg-blue-50 p-2 rounded-xl border border-blue-100 text-blue-700 text-[10px] font-black">WE £${s.rates.weD}/£${s.rates.weN}</div>
-                        <div class="bg-red-50 p-2 rounded-xl border border-red-100 text-red-700 text-[10px] font-black">BH £${s.rates.bhD}/£${s.rates.bhN}</div>
+
+                    <div class="grid grid-cols-2 gap-4 text-[9px] mb-6">
+                        <div>
+                            <p class="font-black text-slate-400 uppercase">Address:</p>
+                            <p class="font-bold leading-tight">${s.address || 'No Address'}</p>
+                        </div>
+                        <div>
+                            <p class="font-black text-slate-400 uppercase">Phone:</p>
+                            <p class="font-bold">${s.phone || 'No Phone'}</p>
+                        </div>
                     </div>
-                    <div class="flex gap-4 border-t pt-6">
-                        <button onclick="editRecord('${s.id}')" class="flex-1 bg-[#1e3a8a] text-white py-3 rounded-2xl text-[10px] font-black uppercase shadow-lg hover:bg-black transition">Edit Details</button>
-                        <button onclick="deleteRecord('${s.id}')" class="text-red-400 text-[10px] font-black uppercase hover:underline">Delete</button>
+                    
+                    <div class="bg-slate-50 p-4 rounded-3xl border mb-4">
+                        <p class="text-[8px] font-black text-slate-400 uppercase mb-2">Reports & Totals</p>
+                        <div class="grid grid-cols-2 gap-2 mb-2">
+                            <input type="date" id="from_${s.id}" class="text-[9px] p-2 border rounded-xl">
+                            <input type="date" id="to_${s.id}" class="text-[9px] p-2 border rounded-xl">
+                        </div>
+                        <div class="grid grid-cols-3 gap-1">
+                            <button onclick="calculateTotalHours('${s.id}')" class="bg-blue-600 text-white text-[8px] py-2 rounded-lg uppercase font-black hover:bg-black transition">Hours</button>
+                            <button onclick="generateStatDoc('P45', '${s.id}')" class="bg-slate-800 text-white text-[8px] py-2 rounded-lg uppercase font-black">P45</button>
+                            <button onclick="generateStatDoc('P60', '${s.id}')" class="bg-slate-800 text-white text-[8px] py-2 rounded-lg uppercase font-black">P60</button>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button onclick="editRecord('${s.id}')" class="flex-1 bg-slate-100 py-3 rounded-2xl text-[9px] font-black uppercase">Edit</button>
+                        <button onclick="archiveRecord('${s.id}')" class="px-4 py-3 bg-white text-slate-200 rounded-2xl text-[9px] font-black uppercase border">${s.status === 'archived' ? 'Restore' : 'Archive'}</button>
                     </div>
                 </div>`).join('');
+        }
+
+        function archiveRecord(id) {
+            const staff = getStaff();
+            const idx = staff.findIndex(s => s.id === id);
+            staff[idx].status = staff[idx].status === 'archived' ? 'active' : 'archived';
+            localStorage.setItem(STAFF_KEY, JSON.stringify(staff));
+            render();
+        }
+
+        function toggleArchiveView() {
+            showingArchived = !showingArchived;
+            document.getElementById('archiveToggleBtn').innerText = showingArchived ? "View Active" : "View Archived";
+            render();
         }
 
         window.onload = render;

@@ -38,6 +38,22 @@
         const SHIFT_KEY = 'ev_shifts_master';
         const STAFF_KEY = 'everest_v5_final';
 
+        // Reuse the Tax Engine from staff registry
+        function calculatePAYE(gross, taxCode) {
+            const code = taxCode.toUpperCase().trim();
+            if (code === 'BR') return gross * 0.20;
+            if (code === 'D0') return gross * 0.40;
+            if (code.endsWith('L')) {
+                const allowanceNum = parseFloat(code.replace('L', ''));
+                const annualAllowance = allowanceNum * 10;
+                // Weekly allowance calculation
+                const weeklyAllowance = annualAllowance / 52;
+                const taxableIncome = Math.max(0, gross - weeklyAllowance);
+                return taxableIncome * 0.20;
+            }
+            return gross > 242 ? ((gross - 242) * 0.20) : 0;
+        }
+
         function getDecimalHours(start, end) {
             if(!start || !end) return 0;
             const [sH, sM] = start.split(':').map(Number);
@@ -106,34 +122,45 @@
 
             container.innerHTML = Object.keys(groupedByStaff).map(staffId => {
                 const staffShifts = groupedByStaff[staffId];
-                const staff = staffRegistry.find(st => st.id === staffId) || { rates: {} };
+                const staff = staffRegistry.find(st => st.id === staffId) || { rates: {}, taxCode: '1257L' };
                 const periodRange = `${startStr || '---'} to ${endStr || '---'}`;
                 
-                let grossPay = 0;
+                let baseGross = 0;
                 const rows = staffShifts.map(s => {
                     const hours = getDecimalHours(s.start, s.end);
                     const rate = getStaffPayRate(s, staff.rates);
                     const total = hours * rate;
-                    grossPay += total;
+                    baseGross += total;
                     return `<tr class="text-[10px] border-b border-slate-50"><td class="py-2 text-left">${s.date}</td><td class="font-bold text-left">${s.home}</td><td class="text-center italic">${s.shiftType}</td><td class="text-center">${hours.toFixed(2)}</td><td class="text-center">£${rate.toFixed(2)}</td><td class="text-right font-bold">£${total.toFixed(2)}</td></tr>`;
                 }).join('');
 
-                const niThreshold = 242; 
-                const taxablePay = Math.max(0, grossPay - 242);
-                const empTax = taxablePay * 0.20;
-                const empNI = Math.max(0, grossPay - niThreshold) * 0.08;
-                const empPension = staff.pension ? (grossPay * 0.05) : 0;
-                const netPay = (grossPay - empTax - empNI - empPension).toFixed(2);
+                // Holiday Pay Logic
+                const holidayAmount = baseGross * 0.1207;
+                let finalGross = baseGross;
+                let holidayStatusText = "";
+                
+                if (staff.holidayTreatment === 'pay') {
+                    finalGross = baseGross + holidayAmount;
+                    holidayStatusText = "Included in Payment";
+                } else {
+                    holidayStatusText = "Accrued to Fund (Not Paid)";
+                }
 
-                const employerNI = Math.max(0, grossPay - niThreshold) * 0.138;
-                const employerPension = staff.pension ? (grossPay * 0.03) : 0;
-                const totalBusinessCost = grossPay + employerNI + employerPension;
+                // Employee Deductions
+                const niThreshold = 242; 
+                const empTax = calculatePAYE(finalGross, staff.taxCode || '1257L');
+                const empNI = Math.max(0, finalGross - niThreshold) * 0.08;
+                const empPension = staff.pensionEnroll === 'yes' ? (finalGross * 0.05) : 0;
+                const netPay = (finalGross - empTax - empNI - empPension).toFixed(2);
+
+                // Employer Contributions
+                const employerNI = Math.max(0, finalGross - 175) * 0.138;
+                const employerPension = staff.pensionEnroll === 'yes' ? (finalGross * 0.03) : 0;
 
                 return `
                 <div class="payslip-card bg-white p-12 rounded-[40px] shadow-2xl border-t-[16px] border-[#1e3a8a] mb-12 text-left">
                     <div class="flex justify-between items-start mb-10 pb-6 border-b border-slate-100">
                         <div class="flex items-center gap-4">
-                            <img src="logo.png" alt="Everest Logo" class="h-16 w-auto object-contain" onerror="this.style.display='none'">
                             <div>
                                 <h2 class="text-3xl font-black uppercase italic tracking-tighter text-[#1e3a8a]">Everest Care</h2>
                                 <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Staff Remittance Advice</p>
@@ -159,7 +186,13 @@
                                         <th class="pb-3 text-left">Date</th><th class="pb-3 text-left">Home</th><th class="pb-3 text-center">Shift</th><th class="pb-3 text-center">Hrs</th><th class="pb-3 text-center">Rate</th><th class="pb-3 text-right">Gross</th>
                                     </tr>
                                 </thead>
-                                <tbody>${rows}</tbody>
+                                <tbody>
+                                    ${rows}
+                                    <tr class="text-[10px] border-t-2">
+                                        <td colspan="5" class="py-4 font-black uppercase text-blue-600 text-right">Holiday Pay (${holidayStatusText})</td>
+                                        <td class="py-4 text-right font-black text-blue-600">£${holidayAmount.toFixed(2)}</td>
+                                    </tr>
+                                </tbody>
                             </table>
                         </div>
 
@@ -167,10 +200,10 @@
                             <div class="bg-slate-50 p-8 rounded-[35px] border border-slate-100">
                                 <h4 class="text-[10px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Net Pay Calculation</h4>
                                 <div class="space-y-3 text-[12px] font-bold">
-                                    <div class="flex justify-between uppercase text-slate-500 text-[10px]"><span>Gross Total</span><span>£${grossPay.toFixed(2)}</span></div>
+                                    <div class="flex justify-between uppercase text-slate-500 text-[10px]"><span>Gross Total</span><span>£${finalGross.toFixed(2)}</span></div>
                                     <div class="flex justify-between text-red-500 italic font-medium"><span>Income Tax (PAYE)</span><span>-£${empTax.toFixed(2)}</span></div>
                                     <div class="flex justify-between text-red-500 italic font-medium"><span>National Insurance</span><span>-£${empNI.toFixed(2)}</span></div>
-                                    ${staff.pension ? `<div class="flex justify-between text-blue-600 font-medium"><span>Pension (5%)</span><span>-£${empPension.toFixed(2)}</span></div>` : ''}
+                                    ${staff.pensionEnroll === 'yes' ? `<div class="flex justify-between text-blue-600 font-medium"><span>Pension (5%)</span><span>-£${empPension.toFixed(2)}</span></div>` : ''}
                                     <div class="pt-6 mt-4 border-t-4 border-slate-200 flex justify-between text-4xl font-black text-[#1e3a8a] tracking-tighter italic">
                                         <span>NET PAY</span>
                                         <span>£${netPay}</span>
@@ -178,12 +211,11 @@
                                 </div>
                             </div>
 
-                            <div class="no-print bg-green-50 p-6 rounded-[25px] border border-green-100">
-                                <h4 class="text-[9px] font-black uppercase text-green-600 mb-2 tracking-widest">Business Liability</h4>
-                                <div class="text-[10px] space-y-2 font-bold text-green-800">
-                                    <div class="flex justify-between"><span>Employer NI (13.8%)</span><span>£${employerNI.toFixed(2)}</span></div>
-                                    <div class="flex justify-between"><span>Employer Pension (3%)</span><span>£${employerPension.toFixed(2)}</span></div>
-                                    <div class="flex justify-between pt-3 mt-1 border-t border-green-200 font-black text-xs"><span>Total Cost</span><span>£${totalBusinessCost.toFixed(2)}</span></div>
+                            <div class="bg-blue-50 p-6 rounded-[25px] border border-blue-100">
+                                <h4 class="text-[9px] font-black uppercase text-blue-600 mb-3 tracking-widest">Employer Contributions</h4>
+                                <div class="text-[10px] space-y-2 font-bold text-blue-800">
+                                    <div class="flex justify-between"><span>Employers NI</span><span>£${employerNI.toFixed(2)}</span></div>
+                                    <div class="flex justify-between"><span>Employers Pension</span><span>£${employerPension.toFixed(2)}</span></div>
                                 </div>
                             </div>
                         </div>
