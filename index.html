@@ -104,7 +104,6 @@
                 : '<option value="">Registry Empty</option>';
         }
 
-        // Helper for duration calculation
         function getShiftHours(startStr, endStr) {
             if(!startStr || !endStr) return 0;
             const [sH, sM] = startStr.split(':').map(Number);
@@ -137,17 +136,13 @@
             renderRota();
         }
 
-        // THE CORE UPDATE LOGIC WITH HARD BLOCK
         function updateShift(id, data) {
             let shifts = JSON.parse(localStorage.getItem(SHIFT_KEY)) || [];
             const staffList = JSON.parse(localStorage.getItem(STAFF_KEY)) || [];
 
-            // --- VISA LIMIT BLOCK ---
             if (data.staffId && data.staffId !== "") {
                 const staff = staffList.find(s => String(s.id) === String(data.staffId));
                 const targetShift = shifts.find(s => String(s.id) === String(id));
-                
-                // This now matches 'hourCap' from your Staff Registry
                 const cap = parseFloat(staff?.hourCap) || 0;
 
                 if (staff && cap > 0) {
@@ -186,10 +181,27 @@
             shifts[idx] = {...shifts[idx], ...data};
             localStorage.setItem(SHIFT_KEY, JSON.stringify(shifts));
             renderRota();
-        } // <--- UPDATE SHIFT ENDS HERE
+        }
 
         function cancelShift(id) {
-            if(!confirm("Cancel this shift?")) return;
+            if(!confirm("Cancel this shift? This will notify the staff member via WhatsApp.")) return;
+            
+            let shifts = JSON.parse(localStorage.getItem(SHIFT_KEY)) || [];
+            const staffList = JSON.parse(localStorage.getItem(STAFF_KEY)) || [];
+            
+            const idx = shifts.findIndex(s => String(s.id) === String(id));
+            if (idx === -1) return;
+
+            const shift = shifts[idx];
+            const staff = staffList.find(st => String(st.id) === String(shift.staffId));
+
+            // AUTO-MESSAGE ON CANCELLATION
+            if (staff && staff.phone && shift.status !== 'requested') {
+                const d = new Date(shift.date).toLocaleDateString('en-GB', {weekday: 'short', day: 'numeric', month: 'short'});
+                const msg = `Hi ${staff.name}, Everest Agency: Your shift on ${d} at ${shift.home} (${shift.start}-${shift.end}) has been CANCELLED.`;
+                window.open(`https://wa.me/${staff.phone}?text=${encodeURIComponent(msg)}`, '_blank');
+            }
+
             updateShift(id, { status: 'cancelled' });
         }
 
@@ -220,7 +232,7 @@
             });
             msg += `\nThank you.`;
 
-            window.location.href = `sms:${p.phone}?&body=${encodeURIComponent(msg)}`;
+            window.open(`https://wa.me/${p.phone}?text=${encodeURIComponent(msg)}`, '_blank');
             localStorage.setItem(SHIFT_KEY, JSON.stringify(shifts));
             renderRota();
         }
@@ -266,7 +278,7 @@
                     <div class="flex items-center gap-3">
                         <select onchange="updateShift('${s.id}', {staffId: this.value, status: this.value ? 'assigned' : 'requested'})" class="p-4 border-2 rounded-2xl font-black text-xs bg-slate-50 min-w-[180px]">
                             <option value="">-- ASSIGN STAFF --</option>
-                            ${staff.filter(st => st.role === s.role).map(st => `<option value="${st.id}" ${String(s.staffId) === String(st.id) ? 'selected' : ''}>${st.name} ${st.visaCap > 0 ? '(CAP: '+st.visaCap+'h)' : ''}</option>`).join('')}
+                            ${staff.filter(st => st.role === s.role).map(st => `<option value="${st.id}" ${String(s.staffId) === String(st.id) ? 'selected' : ''}>${st.name} ${st.hourCap > 0 ? '(CAP: '+st.hourCap+'h)' : ''}</option>`).join('')}
                         </select>
 
                         ${isAssigned ? `<button onclick="sendBulkConfirmation('${s.staffId}')" class="bg-blue-600 text-white px-4 py-4 rounded-2xl text-[10px] font-black uppercase shadow-lg">Confirm</button>` : ''}
