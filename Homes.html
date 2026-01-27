@@ -6,61 +6,45 @@
 </head>
 <body class="bg-slate-100 p-8 font-sans text-slate-900">
     <div class="max-w-[1400px] mx-auto">
-        
         <div class="bg-[#1e3a8a] p-8 rounded-[40px] text-white flex justify-between items-center mb-8 shadow-2xl border-b-[12px] border-blue-800">
-            <h1 class="text-4xl font-black uppercase italic tracking-tighter">Home Registry</h1>
-            <a href="dashboard.html" class="bg-blue-950 px-6 py-2 rounded-full text-[10px] font-black uppercase border border-blue-700 hover:bg-white hover:text-blue-900 transition">← Dashboard</a>
+            <div>
+                <h1 class="text-4xl font-black uppercase italic tracking-tighter">Home Registry</h1>
+                <p class="text-[10px] font-bold text-blue-300 uppercase tracking-widest mt-1">Direct 8-Column Sync</p>
+            </div>
+            <div class="flex gap-4">
+                <button onclick="syncToSheets()" class="bg-green-500 hover:bg-green-400 text-blue-900 px-6 py-2 rounded-full text-[10px] font-black uppercase transition shadow-lg">Cloud Sync</button>
+                <a href="dashboard.html" class="bg-blue-950 px-6 py-2 rounded-full text-[10px] font-black uppercase border border-blue-700 hover:bg-white hover:text-blue-900 transition">← Dashboard</a>
+            </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
             <div class="bg-white p-8 rounded-[30px] shadow-lg border-t-8 border-blue-600 h-fit lg:col-span-1">
                 <div class="space-y-4">
                     <input type="hidden" id="editIndex" value="-1">
-                    
                     <label class="text-[10px] font-black uppercase text-slate-400">Home Name (e.g. Winton HCA)</label>
                     <input id="hName" type="text" class="w-full p-3 border-2 rounded-xl font-bold bg-slate-50 border-slate-100 focus:border-blue-600 outline-none">
-                    
-                    <label class="text-[10px] font-black uppercase text-slate-400">Staff Role</label>
-                    <select id="hRole" class="w-full p-3 border-2 rounded-xl font-bold bg-blue-50 text-blue-800 border-blue-100">
-                        <option value="HCA">HCA</option>
-                        <option value="RGN">RGN</option>
-                    </select>
-
                     <div class="space-y-4 pt-4 border-t border-slate-100">
-                        <div class="grid grid-cols-2 gap-2">
-                            <div class="col-span-2 text-[9px] font-black uppercase text-slate-400">Weekday</div>
-                            <input id="wdD" type="number" placeholder="Day £" class="p-3 border rounded-xl font-bold text-sm">
-                            <input id="wdN" type="number" placeholder="Night £" class="p-3 border rounded-xl font-bold text-sm">
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div class="col-span-2 text-[9px] font-black uppercase text-blue-400">Weekend</div>
-                            <input id="weD" type="number" placeholder="Day £" class="p-3 border-blue-100 border rounded-xl font-bold text-sm bg-blue-50/30">
-                            <input id="weN" type="number" placeholder="Night £" class="p-3 border-blue-100 border rounded-xl font-bold text-sm bg-blue-50/30">
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div class="col-span-2 text-[9px] font-black uppercase text-red-400">Bank Holiday</div>
-                            <input id="bhD" type="number" placeholder="Day £" class="p-3 border-red-100 border rounded-xl font-bold text-sm bg-red-50/30 text-red-600">
-                            <input id="bhN" type="number" placeholder="Night £" class="p-3 border-red-100 border rounded-xl font-bold text-sm bg-red-50/30 text-red-600">
-                        </div>
+                        <div class="grid grid-cols-2 gap-2"><div class="col-span-2 text-[9px] font-black uppercase text-slate-400">Weekday</div><input id="wdD" type="number" placeholder="Day £" class="p-3 border rounded-xl font-bold text-sm"><input id="wdN" type="number" placeholder="Night £" class="p-3 border rounded-xl font-bold text-sm"></div>
+                        <div class="grid grid-cols-2 gap-2"><div class="col-span-2 text-[9px] font-black uppercase text-blue-400">Weekend</div><input id="weD" type="number" placeholder="Day £" class="p-3 border-blue-100 border rounded-xl font-bold text-sm bg-blue-50/30"><input id="weN" type="number" placeholder="Night £" class="p-3 border-blue-100 border rounded-xl font-bold text-sm bg-blue-50/30"></div>
+                        <div class="grid grid-cols-2 gap-2"><div class="col-span-2 text-[9px] font-black uppercase text-red-400">Bank Holiday</div><input id="bhD" type="number" placeholder="Day £" class="p-3 border-red-100 border rounded-xl font-bold text-sm bg-red-50/30 text-red-600"><input id="bhN" type="number" placeholder="Night £" class="p-3 border-red-100 border rounded-xl font-bold text-sm bg-red-50/30 text-red-600"></div>
                     </div>
-                    
                     <button onclick="saveHome()" id="saveBtn" class="w-full bg-[#1e3a8a] text-white py-4 rounded-2xl font-black uppercase shadow-xl hover:bg-black transition mt-4">Save Entry</button>
                     <button onclick="resetForm()" id="cancelBtn" class="w-full hidden bg-slate-100 text-slate-500 py-2 rounded-xl font-black uppercase text-[10px]">Cancel Edit</button>
                 </div>
             </div>
-
             <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-6" id="homesList"></div>
         </div>
     </div>
 
     <script>
         const HOME_KEY = 'ev_homes_db';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyCzDouH4tLiX4NeS8Mh08tkcI3MEV8VHNT-Mke_iav4gZuszw-T0SIuPXa-pTMeL2e/exec'; 
 
         function saveHome() {
             let homes = JSON.parse(localStorage.getItem(HOME_KEY)) || [];
             const data = {
+                id: document.getElementById('editIndex').value === "-1" ? "LOC-" + Date.now() : homes[document.getElementById('editIndex').value].id,
                 name: document.getElementById('hName').value.trim(),
-                role: document.getElementById('hRole').value,
                 wdD: document.getElementById('wdD').value || 0,
                 wdN: document.getElementById('wdN').value || 0,
                 weD: document.getElementById('weD').value || 0,
@@ -68,21 +52,25 @@
                 bhD: document.getElementById('bhD').value || 0,
                 bhN: document.getElementById('bhN').value || 0
             };
-
-            if(!data.name) return alert("Please enter the Home Name (e.g. Winton HCA)");
-
+            if(!data.name) return alert("Enter Home Name");
             const editIdx = parseInt(document.getElementById('editIndex').value);
             if(editIdx > -1) homes[editIdx] = data; else homes.push(data);
-
             localStorage.setItem(HOME_KEY, JSON.stringify(homes));
             resetForm(); render();
+        }
+
+        async function syncToSheets() {
+            const homes = JSON.parse(localStorage.getItem(HOME_KEY)) || [];
+            try {
+                await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'syncHomes', data: homes }) });
+                alert("Cloud Sync Successful!");
+            } catch (e) { alert("Sync Error: Check Connection"); }
         }
 
         function editHome(idx) {
             let homes = JSON.parse(localStorage.getItem(HOME_KEY));
             const h = homes[idx];
             document.getElementById('hName').value = h.name;
-            document.getElementById('hRole').value = h.role;
             document.getElementById('wdD').value = h.wdD;
             document.getElementById('wdN').value = h.wdN;
             document.getElementById('weD').value = h.weD;
@@ -102,7 +90,7 @@
         }
 
         function deleteHome(idx) {
-            if(confirm("Delete this rate card?")) {
+            if(confirm("Delete this?")) {
                 let homes = JSON.parse(localStorage.getItem(HOME_KEY));
                 homes.splice(idx, 1);
                 localStorage.setItem(HOME_KEY, JSON.stringify(homes));
@@ -113,35 +101,27 @@
         function render() {
             const list = document.getElementById('homesList');
             const homes = JSON.parse(localStorage.getItem(HOME_KEY)) || [];
-            
             list.innerHTML = homes.map((h, i) => `
                 <div class="bg-white p-8 rounded-[40px] shadow-sm border border-slate-200">
                     <div class="flex justify-between items-start mb-6">
-                        <div>
-                            <h3 class="font-black text-2xl uppercase italic tracking-tighter leading-none">${h.name}</h3>
-                            <span class="text-[10px] font-black uppercase text-blue-600 tracking-widest">${h.role} Rates</span>
-                        </div>
+                        <h3 class="font-black text-2xl uppercase italic tracking-tighter leading-none">${h.name}</h3>
                         <div class="flex gap-4">
                             <button onclick="editHome(${i})" class="text-[10px] font-black uppercase text-blue-400 underline">Edit</button>
                             <button onclick="deleteHome(${i})" class="text-[10px] font-black uppercase text-red-300 underline">Delete</button>
                         </div>
                     </div>
-                    
                     <div class="grid grid-cols-3 gap-3">
                         <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                            <p class="text-[8px] font-black text-slate-400 uppercase mb-2 border-b">Weekday</p>
-                            <div class="text-[11px] font-bold">☀️ £${h.wdD}</div>
-                            <div class="text-[11px] font-bold">🌙 £${h.wdN}</div>
+                            <p class="text-[8px] font-black text-slate-400 uppercase mb-2">Weekday</p>
+                            <div class="text-[11px] font-bold">☀️ £${h.wdD} / 🌙 £${h.wdN}</div>
                         </div>
                         <div class="bg-blue-50/50 p-3 rounded-2xl border border-blue-100">
-                            <p class="text-[8px] font-black text-blue-400 uppercase mb-2 border-b">Weekend</p>
-                            <div class="text-[11px] font-bold text-blue-700">☀️ £${h.weD}</div>
-                            <div class="text-[11px] font-bold text-blue-700">🌙 £${h.weN}</div>
+                            <p class="text-[8px] font-black text-blue-400 uppercase mb-2">Weekend</p>
+                            <div class="text-[11px] font-bold text-blue-700">☀️ £${h.weD} / 🌙 £${h.weN}</div>
                         </div>
                         <div class="bg-red-50 p-3 rounded-2xl border border-red-100">
-                            <p class="text-[8px] font-black text-red-400 uppercase mb-2 border-b">Bank Hol</p>
-                            <div class="text-[11px] font-black text-red-700">☀️ £${h.bhD}</div>
-                            <div class="text-[11px] font-black text-red-700">🌙 £${h.bhN}</div>
+                            <p class="text-[8px] font-black text-red-400 uppercase mb-2">Bank Hol</p>
+                            <div class="text-[11px] font-black text-red-700">☀️ £${h.bhD} / 🌙 £${h.bhN}</div>
                         </div>
                     </div>
                 </div>
