@@ -1,234 +1,244 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8"><title>Everest Care - Professional Payroll</title>
+    <meta charset="UTF-8">
+    <title>Everest - Payroll Archive</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @media print {
-            .no-print { display: none !important; }
-            body { background: white; padding: 0; }
-            .payslip-card { box-shadow: none !important; border: 1px solid #e2e8f0; page-break-after: always; margin-bottom: 0; }
-        }
+        @media print { .no-print { display: none !important; } .print-only { display: block !important; } }
+        #payslipModal { display: none; }
+        .tab-active { border-bottom: 4px solid #22c55e; color: white; }
     </style>
 </head>
-<body class="bg-slate-100 p-8 font-sans text-slate-900">
-    <div class="max-w-[1100px] mx-auto">
+<body class="bg-slate-50 p-6 font-sans text-slate-900">
+    <div class="max-w-[1500px] mx-auto no-print">
         
-        <nav class="bg-white p-6 rounded-[30px] shadow-lg mb-8 no-print flex flex-wrap items-end gap-6 border-t-4 border-blue-900">
+        <div class="bg-[#1e3a8a] p-10 rounded-[45px] text-white flex justify-between items-center mb-8 shadow-2xl border-b-[12px] border-blue-900">
             <div>
-                <label class="text-[9px] font-black uppercase text-slate-400 block mb-1 ml-1">Pay Period Start</label>
-                <input type="date" id="dateStart" class="p-2 border-2 rounded-xl font-bold text-sm outline-none focus:border-blue-900">
+                <h1 class="text-5xl font-black uppercase italic tracking-tighter leading-none">Everest Payroll</h1>
+                <div class="flex gap-6 mt-4">
+                    <button onclick="switchView('processor')" id="tabProc" class="text-xs font-black uppercase tab-active pb-1">Processor</button>
+                    <button onclick="switchView('archive')" id="tabArch" class="text-xs font-black uppercase text-blue-300 pb-1">Archive Vault</button>
+                    <a href="dashboard.html" class="text-blue-300 text-xs font-black uppercase underline ml-4">← Dashboard</a>
+                </div>
             </div>
-            <div>
-                <label class="text-[9px] font-black uppercase text-slate-400 block mb-1 ml-1">Pay Period End</label>
-                <input type="date" id="dateEnd" class="p-2 border-2 rounded-xl font-bold text-sm outline-none focus:border-blue-900">
+            <div id="processorControls" class="bg-white/10 p-6 rounded-[30px] border border-white/20 backdrop-blur-md">
+                <div class="flex gap-3">
+                    <input type="date" id="payrollStart" class="bg-blue-900 border border-blue-700 rounded-xl p-3 text-xs font-bold text-white outline-none">
+                    <input type="date" id="payrollEnd" class="bg-blue-900 border border-blue-700 rounded-xl p-3 text-xs font-bold text-white outline-none">
+                    <button onclick="runPayroll()" class="bg-green-500 hover:bg-green-400 text-blue-900 px-8 py-3 rounded-xl font-black uppercase text-xs transition-all shadow-lg">Process Run</button>
+                    <button onclick="archiveCurrentRun()" id="archiveBtn" class="hidden bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-black uppercase text-xs transition-all">Archive Run</button>
+                </div>
             </div>
-            <button onclick="renderPayroll()" class="bg-blue-900 text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase shadow-lg hover:bg-black transition">Generate Reports</button>
-            
-            <div class="flex-1 text-right">
-                <button onclick="window.print()" class="bg-slate-100 text-slate-600 px-6 py-3 rounded-2xl text-[10px] font-black uppercase border hover:bg-slate-200">Print All</button>
-                <a href="dashboard.html" class="inline-block ml-4 text-slate-400 text-[9px] font-black uppercase underline">Dashboard</a>
-            </div>
-        </nav>
+        </div>
 
-        <div id="payrollContainer" class="space-y-10"></div>
+        <div id="processorView" class="space-y-8">
+            <div class="bg-white rounded-[40px] shadow-2xl overflow-hidden border border-slate-200">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-50 border-b-2 font-black uppercase text-slate-400 text-[11px] tracking-widest">
+                        <tr>
+                            <th class="p-6">Employee</th>
+                            <th class="p-6 text-center">Hrs</th>
+                            <th class="p-6">Gross Pay</th>
+                            <th class="p-6">Deductions</th>
+                            <th class="p-6">Net Payable</th>
+                            <th class="p-6 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="payrollBody" class="divide-y divide-slate-50 text-sm font-bold">
+                        <tr><td colspan="6" class="p-20 text-center text-slate-300 font-black uppercase italic">Select date range to begin</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="archiveView" class="hidden space-y-6">
+            <h2 class="text-3xl font-black uppercase italic text-blue-900">Payroll History Vault</h2>
+            <div id="archiveList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </div>
     </div>
 
+    <div id="payslipModal" class="fixed inset-0 bg-slate-900/95 z-50 flex items-center justify-center p-4 no-print">
+        <div class="bg-white w-full max-w-5xl rounded-[50px] p-12 overflow-y-auto max-h-[95vh] shadow-2xl relative">
+            <div id="payslipContent"></div>
+            <div class="mt-10 flex gap-4 no-print border-t pt-8">
+                <button onclick="window.print()" class="bg-[#1e3a8a] text-white px-12 py-5 rounded-2xl font-black uppercase text-xs shadow-xl">Print Official Record</button>
+                <button onclick="document.getElementById('payslipModal').style.display='none'" class="bg-slate-100 text-slate-400 px-12 py-5 rounded-2xl font-black uppercase text-xs">Close</button>
+            </div>
+        </div>
+    </div>
+    <div id="printArea" class="hidden print-only bg-white p-10"></div>
+
     <script>
-        const SHIFT_KEY = 'ev_shifts_master';
-        const STAFF_KEY = 'everest_v5_final';
+        const STAFF_KEY = 'everest_v5_final'; 
+        const SHIFT_KEY = 'ev_shifts_master'; 
+        const ARCHIVE_KEY = 'everest_payroll_archives';
 
-        // Reuse the Tax Engine from staff registry
-        function calculatePAYE(gross, taxCode) {
-            const code = taxCode.toUpperCase().trim();
-            if (code === 'BR') return gross * 0.20;
-            if (code === 'D0') return gross * 0.40;
-            if (code.endsWith('L')) {
-                const allowanceNum = parseFloat(code.replace('L', ''));
-                const annualAllowance = allowanceNum * 10;
-                // Weekly allowance calculation
-                const weeklyAllowance = annualAllowance / 52;
-                const taxableIncome = Math.max(0, gross - weeklyAllowance);
-                return taxableIncome * 0.20;
-            }
-            return gross > 242 ? ((gross - 242) * 0.20) : 0;
+        let currentRunData = [];
+
+        function switchView(view) {
+            document.getElementById('processorView').classList.toggle('hidden', view !== 'processor');
+            document.getElementById('archiveView').classList.toggle('hidden', view !== 'archive');
+            document.getElementById('tabProc').className = view === 'processor' ? 'text-xs font-black uppercase tab-active pb-1' : 'text-xs font-black uppercase text-blue-300 pb-1';
+            document.getElementById('tabArch').className = view === 'archive' ? 'text-xs font-black uppercase tab-active pb-1' : 'text-xs font-black uppercase text-blue-300 pb-1';
+            if(view === 'archive') renderArchive();
         }
 
-        function getDecimalHours(start, end) {
-            if(!start || !end) return 0;
-            const [sH, sM] = start.split(':').map(Number);
-            const [eH, eM] = end.split(':').map(Number);
-            let diff = (eH + eM/60) - (sH + sM/60);
-            if (diff < 0) diff += 24; 
-            return diff;
-        }
+        function runPayroll() {
+            const start = document.getElementById('payrollStart').value;
+            const end = document.getElementById('payrollEnd').value;
+            if (!start || !end) return alert("Select Period");
 
-        function getStaffPayRate(shift, staffRates) {
-            if (!staffRates) return 0;
-            const d = new Date(shift.date);
-            const isWeekend = (d.getDay() === 0 || d.getDay() === 6);
-            const isNight = (shift.shiftType === 'Night');
-            if (shift.isBH) return parseFloat(isNight ? staffRates.bhN : staffRates.bhD) || 0;
-            if (isWeekend) return parseFloat(isNight ? staffRates.weN : staffRates.weD) || 0;
-            return parseFloat(isNight ? staffRates.wdN : staffRates.wdD) || 0;
-        }
-
-        function openPdfPreview(staffName) {
-            const card = Array.from(document.querySelectorAll('.payslip-card')).find(c => c.innerHTML.includes(staffName));
-            if (!card) return alert("Error finding report data.");
-
-            const win = window.open('', '_blank', 'width=1000,height=900');
-            win.document.write(`
-                <html>
-                <head><script src="https://cdn.tailwindcss.com"><\/script></head>
-                <body class="p-10 text-left bg-white">
-                    <div class="no-print mb-8 p-6 bg-slate-900 text-white rounded-3xl flex justify-between items-center shadow-2xl">
-                        <div>
-                            <h3 class="font-black uppercase italic text-lg leading-none">PDF Preview</h3>
-                            <p class="text-[10px] font-bold text-slate-400 uppercase mt-1">Select 'Save as PDF' to generate the document</p>
-                        </div>
-                        <button onclick="window.print()" class="bg-blue-600 px-8 py-3 rounded-2xl font-black uppercase text-[10px] hover:bg-blue-500 transition">Save PDF</button>
-                    </div>
-                    ${card.outerHTML}
-                </body>
-                </html>
-            `);
-            win.document.close();
-        }
-
-        function renderPayroll() {
+            const staff = JSON.parse(localStorage.getItem(STAFF_KEY)) || [];
             const shifts = JSON.parse(localStorage.getItem(SHIFT_KEY)) || [];
-            const staffRegistry = JSON.parse(localStorage.getItem(STAFF_KEY)) || [];
-            const container = document.getElementById('payrollContainer');
-            const startStr = document.getElementById('dateStart').value;
-            const endStr = document.getElementById('dateEnd').value;
+            
+            currentRunData = [];
+            const body = document.getElementById('payrollBody');
+            body.innerHTML = "";
 
-            const completed = shifts.filter(s => {
-                if(s.status !== 'completed') return false;
-                if(!startStr || !endStr) return true;
-                return s.date >= startStr && s.date <= endStr;
+            staff.forEach(s => {
+                const sShifts = shifts.filter(sh => sh.staffId === s.id && sh.status === 'completed' && sh.date >= start && sh.date <= end);
+                if (sShifts.length === 0) return;
+
+                let items = [];
+                let sGross = 0, sHrs = 0;
+
+                sShifts.forEach(shift => {
+                    const startHour = parseInt(shift.start.split(':')[0]);
+                    const isWE = [0,6].includes(new Date(shift.date).getDay());
+                    const [shH, shM] = shift.start.split(':').map(Number);
+                    const [ehH, ehM] = shift.end.split(':').map(Number);
+                    let d = (ehH + ehM/60) - (shH + shM/60); if (d < 0) d += 24;
+
+                    const isNight = (startHour >= 19 || startHour < 6);
+                    let rate = shift.isBH ? (isNight ? s.bhN : s.bhD) : (isWE ? (isNight ? s.weN : s.weD) : (isNight ? s.wdN : s.wdD));
+                    
+                    items.push({ date: shift.date, home: shift.home || "Unnamed Facility", type: isNight ? "Night" : "Day", hours: d, rate: rate, total: (d * parseFloat(rate || 0)) });
+                    sGross += (d * parseFloat(rate || 0));
+                    sHrs += d;
+                });
+
+                const holPay = sGross * 0.1207;
+                
+                // CORE LOGIC CHANGE: Only add to taxable gross if treatment is "pay"
+                const totalGrossForTax = s.holidayTreatment === 'pay' ? (sGross + holPay) : sGross;
+
+                // TAX CODE CALCULATION
+                const taxCodeDigits = s.taxCode ? s.taxCode.replace(/\D/g,'') : "1257";
+                const weeklyThreshold = (parseFloat(taxCodeDigits) * 10) / 52;
+                let tax = totalGrossForTax > weeklyThreshold ? (totalGrossForTax - weeklyThreshold) * 0.20 : 0;
+
+                // NI CALCULATION (Weekly Thresholds 2025/26)
+                const niPriThreshold = 242; 
+                const niSecThreshold = 175;
+                let ni = totalGrossForTax > niPriThreshold ? (totalGrossForTax - niPriThreshold) * 0.08 : 0;
+                let erNi = totalGrossForTax > niSecThreshold ? (totalGrossForTax - niSecThreshold) * 0.138 : 0;
+
+                const pen = s.pensionEnroll ? totalGrossForTax * 0.05 : 0;
+                const net = totalGrossForTax - ni - tax - pen;
+
+                currentRunData.push({ staff: s, gross: sGross, holPay, totalGross: totalGrossForTax, hours: sHrs, items, ni, tax, erNi, pension: pen, net, start, end });
+
+                body.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition-all">
+                        <td class="p-6">
+                            <span class="text-blue-900 font-black block text-lg uppercase italic">${s.name}</span>
+                            <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">NI: ${s.niNumber} | Code: ${s.taxCode}</span>
+                        </td>
+                        <td class="p-6 text-center text-slate-500 font-black">${sHrs.toFixed(2)}</td>
+                        <td class="p-6 font-black text-slate-800">£${totalGrossForTax.toFixed(2)}</td>
+                        <td class="p-6 text-red-500 font-bold">Tax & NI: -£${(ni + tax).toFixed(2)}</td>
+                        <td class="p-6"><span class="bg-green-100 text-green-700 px-5 py-2 rounded-2xl font-black italic">£${net.toFixed(2)}</span></td>
+                        <td class="p-6 text-right no-print">
+                            <button onclick="viewPayslip('${s.id}')" class="bg-[#1e3a8a] text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase">View Advice</button>
+                        </td>
+                    </tr>`;
             });
-
-            if (completed.length === 0) {
-                container.innerHTML = `<div class="p-20 text-center bg-white rounded-[40px] border-4 border-dashed text-slate-300 font-black uppercase text-xs">No completed shifts found</div>`;
-                return;
-            }
-
-            const groupedByStaff = completed.reduce((acc, s) => {
-                if (!acc[s.staffId]) acc[s.staffId] = [];
-                acc[s.staffId].push(s);
-                return acc;
-            }, {});
-
-            container.innerHTML = Object.keys(groupedByStaff).map(staffId => {
-                const staffShifts = groupedByStaff[staffId];
-                const staff = staffRegistry.find(st => st.id === staffId) || { rates: {}, taxCode: '1257L' };
-                const periodRange = `${startStr || '---'} to ${endStr || '---'}`;
-                
-                let baseGross = 0;
-                const rows = staffShifts.map(s => {
-                    const hours = getDecimalHours(s.start, s.end);
-                    const rate = getStaffPayRate(s, staff.rates);
-                    const total = hours * rate;
-                    baseGross += total;
-                    return `<tr class="text-[10px] border-b border-slate-50"><td class="py-2 text-left">${s.date}</td><td class="font-bold text-left">${s.home}</td><td class="text-center italic">${s.shiftType}</td><td class="text-center">${hours.toFixed(2)}</td><td class="text-center">£${rate.toFixed(2)}</td><td class="text-right font-bold">£${total.toFixed(2)}</td></tr>`;
-                }).join('');
-
-                // Holiday Pay Logic
-                const holidayAmount = baseGross * 0.1207;
-                let finalGross = baseGross;
-                let holidayStatusText = "";
-                
-                if (staff.holidayTreatment === 'pay') {
-                    finalGross = baseGross + holidayAmount;
-                    holidayStatusText = "Included in Payment";
-                } else {
-                    holidayStatusText = "Accrued to Fund (Not Paid)";
-                }
-
-                // Employee Deductions
-                const niThreshold = 242; 
-                const empTax = calculatePAYE(finalGross, staff.taxCode || '1257L');
-                const empNI = Math.max(0, finalGross - niThreshold) * 0.08;
-                const empPension = staff.pensionEnroll === 'yes' ? (finalGross * 0.05) : 0;
-                const netPay = (finalGross - empTax - empNI - empPension).toFixed(2);
-
-                // Employer Contributions
-                const employerNI = Math.max(0, finalGross - 175) * 0.138;
-                const employerPension = staff.pensionEnroll === 'yes' ? (finalGross * 0.03) : 0;
-
-                return `
-                <div class="payslip-card bg-white p-12 rounded-[40px] shadow-2xl border-t-[16px] border-[#1e3a8a] mb-12 text-left">
-                    <div class="flex justify-between items-start mb-10 pb-6 border-b border-slate-100">
-                        <div class="flex items-center gap-4">
-                            <div>
-                                <h2 class="text-3xl font-black uppercase italic tracking-tighter text-[#1e3a8a]">Everest Care</h2>
-                                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Staff Remittance Advice</p>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-[10px] font-black uppercase">Tax Code: <span class="text-blue-600">${staff.taxCode || '1257L'}</span></p>
-                            <p class="text-[11px] font-black text-slate-800 mt-1 uppercase">Period: <span class="bg-yellow-100 px-2">${periodRange}</span></p>
-                            <button onclick="openPdfPreview('${staff.name}')" class="no-print mt-4 bg-blue-900 text-white px-5 py-2 rounded-xl text-[9px] font-black uppercase hover:bg-orange-600 transition-all shadow-lg">Download / Print PDF</button>
-                        </div>
-                    </div>
-
-                    <div class="mb-8">
-                        <p class="text-[9px] font-black text-slate-400 uppercase mb-1">Employee Name</p>
-                        <p class="text-4xl font-black uppercase text-slate-800 tracking-tight">${staff.name || 'Unregistered Staff'}</p>
-                    </div>
-
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                        <div class="lg:col-span-2">
-                            <table class="w-full text-left">
-                                <thead>
-                                    <tr class="text-[9px] font-black text-slate-400 uppercase border-b-2 border-slate-100">
-                                        <th class="pb-3 text-left">Date</th><th class="pb-3 text-left">Home</th><th class="pb-3 text-center">Shift</th><th class="pb-3 text-center">Hrs</th><th class="pb-3 text-center">Rate</th><th class="pb-3 text-right">Gross</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${rows}
-                                    <tr class="text-[10px] border-t-2">
-                                        <td colspan="5" class="py-4 font-black uppercase text-blue-600 text-right">Holiday Pay (${holidayStatusText})</td>
-                                        <td class="py-4 text-right font-black text-blue-600">£${holidayAmount.toFixed(2)}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div class="space-y-4">
-                            <div class="bg-slate-50 p-8 rounded-[35px] border border-slate-100">
-                                <h4 class="text-[10px] font-black uppercase text-slate-400 mb-4 border-b pb-2">Net Pay Calculation</h4>
-                                <div class="space-y-3 text-[12px] font-bold">
-                                    <div class="flex justify-between uppercase text-slate-500 text-[10px]"><span>Gross Total</span><span>£${finalGross.toFixed(2)}</span></div>
-                                    <div class="flex justify-between text-red-500 italic font-medium"><span>Income Tax (PAYE)</span><span>-£${empTax.toFixed(2)}</span></div>
-                                    <div class="flex justify-between text-red-500 italic font-medium"><span>National Insurance</span><span>-£${empNI.toFixed(2)}</span></div>
-                                    ${staff.pensionEnroll === 'yes' ? `<div class="flex justify-between text-blue-600 font-medium"><span>Pension (5%)</span><span>-£${empPension.toFixed(2)}</span></div>` : ''}
-                                    <div class="pt-6 mt-4 border-t-4 border-slate-200 flex justify-between text-4xl font-black text-[#1e3a8a] tracking-tighter italic">
-                                        <span>NET PAY</span>
-                                        <span>£${netPay}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="bg-blue-50 p-6 rounded-[25px] border border-blue-100">
-                                <h4 class="text-[9px] font-black uppercase text-blue-600 mb-3 tracking-widest">Employer Contributions</h4>
-                                <div class="text-[10px] space-y-2 font-bold text-blue-800">
-                                    <div class="flex justify-between"><span>Employers NI</span><span>£${employerNI.toFixed(2)}</span></div>
-                                    <div class="flex justify-between"><span>Employers Pension</span><span>£${employerPension.toFixed(2)}</span></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>`;
-            }).join('');
+            document.getElementById('archiveBtn').classList.remove('hidden');
         }
 
-        window.onload = () => {
-            document.getElementById('dateStart').value = '2026-01-19';
-            document.getElementById('dateEnd').value = '2026-01-25';
-            renderPayroll();
-        };
+        function archiveCurrentRun() {
+            if(currentRunData.length === 0) return;
+            const archives = JSON.parse(localStorage.getItem(ARCHIVE_KEY)) || [];
+            archives.unshift({ id: "RUN-" + Date.now(), stamp: new Date().toLocaleString(), period: `${currentRunData[0].start} to ${currentRunData[0].end}`, data: currentRunData });
+            localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archives));
+            alert("Payroll period archived successfully.");
+        }
+
+        function renderArchive() {
+            const archives = JSON.parse(localStorage.getItem(ARCHIVE_KEY)) || [];
+            const list = document.getElementById('archiveList');
+            list.innerHTML = archives.map(a => `
+                <div class="bg-white p-8 rounded-[35px] border-2 shadow-lg hover:border-blue-500 transition-all">
+                    <h3 class="text-xl font-black text-slate-800 italic uppercase">${a.period}</h3>
+                    <p class="text-[10px] font-black text-blue-600 uppercase mt-2">Stamp: ${a.stamp}</p>
+                    <button onclick="loadArchive('${a.id}')" class="mt-6 w-full bg-slate-900 text-white py-4 rounded-2xl text-[10px] font-black uppercase hover:bg-green-500">Restore & View</button>
+                </div>
+            `).join('');
+        }
+
+        function loadArchive(id) {
+            const archives = JSON.parse(localStorage.getItem(ARCHIVE_KEY)) || [];
+            const found = archives.find(a => a.id === id);
+            if(found) { currentRunData = found.data; switchView('processor'); runPayroll(); }
+        }
+
+        function viewPayslip(staffId) {
+            const d = currentRunData.find(x => x.staff.id === staffId);
+            const isPaid = d.staff.holidayTreatment === 'pay';
+            
+            const html = `
+                <div class="flex justify-between items-start border-b-[8px] border-blue-900 pb-10 mb-10">
+                    <div>
+                        <h1 class="text-6xl font-black uppercase italic tracking-tighter text-blue-900">Everest Care</h1>
+                        <p class="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] mt-2">Staff Remittance Advice</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-3xl font-black uppercase text-slate-900">${d.staff.name}</p>
+                        <p class="text-xs font-bold text-slate-500 uppercase mt-1">NI: ${d.staff.niNumber} | Tax Code: ${d.staff.taxCode}</p>
+                        <p class="text-xs font-black text-blue-600 uppercase mt-1 italic">Period: ${d.start} to ${d.end}</p>
+                    </div>
+                </div>
+
+                <table class="w-full text-left text-[12px] mb-8 border-collapse">
+                    <thead class="bg-slate-50 font-black uppercase text-slate-600">
+                        <tr><th class="p-4 border">Earnings Breakdown</th><th class="p-4 border text-center">Hrs</th><th class="p-4 border text-right">Rate</th><th class="p-4 border text-right">Total</th></tr>
+                    </thead>
+                    <tbody class="divide-y font-bold">
+                        ${d.items.map(i => `<tr><td class="p-4 border uppercase text-slate-900 font-black">${i.home} (${i.type})</td><td class="p-4 border text-center">${i.hours.toFixed(2)}</td><td class="p-4 border text-right">£${i.rate}</td><td class="p-4 border text-right font-black">£${i.total.toFixed(2)}</td></tr>`).join('')}
+                        <tr class="${isPaid ? 'bg-green-50 text-green-700' : 'bg-slate-50 text-slate-400'} font-black">
+                            <td class="p-4 border uppercase">Statutory Holiday Pay (12.07%) ${isPaid ? '' : '[ACCRUED ONLY - NOT PAID]'}</td>
+                            <td colspan="2" class="p-4 border"></td>
+                            <td class="p-4 border text-right font-black">£${d.holPay.toFixed(2)}</td>
+                        </tr>
+                    </tbody>
+                    <tfoot class="bg-blue-900 text-white font-black">
+                        <tr><td colspan="3" class="p-5 text-right uppercase tracking-widest">Total Gross Taxable Earnings</td><td class="p-5 text-right text-xl italic tracking-tighter">£${d.totalGross.toFixed(2)}</td></tr>
+                    </tfoot>
+                </table>
+
+                <div class="grid grid-cols-2 gap-10 mb-10">
+                    <div class="border-2 p-6 rounded-[30px]">
+                        <p class="text-[10px] font-black text-slate-400 uppercase mb-4">Deductions Breakdown</p>
+                        <div class="flex justify-between text-sm mb-2 font-bold"><span>Income Tax (PAYE)</span><span class="text-red-600">-£${d.tax.toFixed(2)}</span></div>
+                        <div class="flex justify-between text-sm mb-2 font-bold"><span>National Insurance (Employee)</span><span class="text-red-600">-£${d.ni.toFixed(2)}</span></div>
+                        ${d.pension > 0 ? `<div class="flex justify-between text-sm font-bold"><span>Pension Contribution</span><span class="text-red-600">-£${d.pension.toFixed(2)}</span></div>` : ''}
+                    </div>
+                    <div class="border-2 p-6 rounded-[30px] bg-slate-50">
+                        <p class="text-[10px] font-black text-slate-400 uppercase mb-4">Employer Statutory Contributions</p>
+                        <div class="flex justify-between text-sm font-bold"><span>Employer NI</span><span>£${d.erNi.toFixed(2)}</span></div>
+                        <p class="text-[8px] mt-6 text-slate-400 italic font-black uppercase tracking-widest">Holiday Status: ${d.staff.holidayTreatment === 'pay' ? 'Paid with Wages' : 'Held in Accrual Fund'}</p>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center bg-[#1e3a8a] text-white p-12 rounded-[50px] shadow-2xl">
+                    <div class="text-7xl font-black italic tracking-tighter">£${d.net.toFixed(2)}</div>
+                    <div class="text-right"><p class="text-[11px] font-black uppercase text-blue-300 tracking-[0.3em]">Net Cleared Funds</p></div>
+                </div>`;
+            document.getElementById('payslipContent').innerHTML = html;
+            document.getElementById('printArea').innerHTML = html;
+            document.getElementById('payslipModal').style.display = 'flex';
+        }
     </script>
 </body>
 </html>
