@@ -16,6 +16,7 @@
             <a href="payroll.html" class="bg-white text-slate-400 px-6 py-2 rounded-full text-[10px] font-black uppercase border hover:bg-blue-50">Payroll</a>
             <a href="invoices.html" class="bg-white text-slate-400 px-6 py-2 rounded-full text-[10px] font-black uppercase border hover:bg-blue-50">Invoicing</a>
             <button onclick="syncToSheets()" class="bg-green-600 text-white px-6 py-2 rounded-full text-[10px] font-black uppercase shadow-lg hover:bg-green-500 transition">Cloud Sync Shifts</button>
+            <button onclick="refreshFromSheets()" class="bg-blue-600 text-white px-6 py-2 rounded-full text-[10px] font-black uppercase shadow-lg hover:bg-blue-500 transition">Pull from Cloud</button>
         </nav>
 
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -83,6 +84,30 @@
         const HOME_KEY = 'ev_homes_db'; 
         const SHIFT_KEY = 'ev_shifts_master';
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyCzDouH4tLiX4NeS8Mh08tkcI3MEV8VHNT-Mke_iav4gZuszw-T0SIuPXa-pTMeL2e/exec';
+
+        // ONLY ADDITION TO SCRIPTS: Pull Data Function
+        async function refreshFromSheets() {
+            try {
+                const [staffRes, homesRes, shiftsRes] = await Promise.all([
+                    fetch(`${SCRIPT_URL}?tab=staff`),
+                    fetch(`${SCRIPT_URL}?tab=homes`),
+                    fetch(`${SCRIPT_URL}?tab=shifts`)
+                ]);
+                
+                const staffData = await staffRes.json();
+                const homesData = await homesRes.json();
+                const shiftsData = await shiftsRes.json();
+
+                if(Array.isArray(staffData)) localStorage.setItem(STAFF_KEY, JSON.stringify(staffData));
+                if(Array.isArray(homesData)) localStorage.setItem(HOME_KEY, JSON.stringify(homesData));
+                if(Array.isArray(shiftsData)) localStorage.setItem(SHIFT_KEY, JSON.stringify(shiftsData));
+
+                alert("Data Refreshed from Cloud!");
+                location.reload(); 
+            } catch (e) {
+                alert("Pull Error: Check Script Deployment");
+            }
+        }
 
         async function syncToSheets() {
             const shifts = JSON.parse(localStorage.getItem(SHIFT_KEY)) || [];
