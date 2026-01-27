@@ -15,6 +15,7 @@
             <a href="calendar.html" class="bg-white text-slate-400 px-6 py-2 rounded-full text-[10px] font-black uppercase border hover:bg-blue-50">Calendar</a>
             <a href="payroll.html" class="bg-white text-slate-400 px-6 py-2 rounded-full text-[10px] font-black uppercase border hover:bg-blue-50">Payroll</a>
             <a href="invoices.html" class="bg-white text-slate-400 px-6 py-2 rounded-full text-[10px] font-black uppercase border hover:bg-blue-50">Invoicing</a>
+            <button onclick="syncToSheets()" class="bg-green-600 text-white px-6 py-2 rounded-full text-[10px] font-black uppercase shadow-lg hover:bg-green-500 transition">Cloud Sync Shifts</button>
         </nav>
 
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -81,6 +82,21 @@
         const STAFF_KEY = 'everest_v5_final';
         const HOME_KEY = 'ev_homes_db'; 
         const SHIFT_KEY = 'ev_shifts_master';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyCzDouH4tLiX4NeS8Mh08tkcI3MEV8VHNT-Mke_iav4gZuszw-T0SIuPXa-pTMeL2e/exec';
+
+        async function syncToSheets() {
+            const shifts = JSON.parse(localStorage.getItem(SHIFT_KEY)) || [];
+            try {
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({ action: 'syncShifts', data: shifts })
+                });
+                alert("Shifts Synced to Cloud Successfully!");
+            } catch (e) {
+                alert("Sync Error: Check Connection");
+            }
+        }
 
         function init() {
             const now = new Date();
@@ -195,7 +211,6 @@
             const shift = shifts[idx];
             const staff = staffList.find(st => String(st.id) === String(shift.staffId));
 
-            // AUTO-MESSAGE ON CANCELLATION
             if (staff && staff.phone && shift.status !== 'requested') {
                 const d = new Date(shift.date).toLocaleDateString('en-GB', {weekday: 'short', day: 'numeric', month: 'short'});
                 const msg = `Hi ${staff.name}, Everest Agency: Your shift on ${d} at ${shift.home} (${shift.start}-${shift.end}) has been CANCELLED.`;
