@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Everest - Master Staff Registry (Role & Compliance)</title>
+    <title>Everest - Master Staff Registry</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @media print { .no-print { display: none !important; } #printArea { display: block !important; border: none; } }
@@ -18,7 +18,7 @@
                 <div class="flex gap-4 mt-2">
                     <a href="dashboard.html" class="text-blue-200 text-[10px] font-black uppercase underline hover:text-white">← Back to Dashboard</a>
                     <button onclick="toggleArchiveView()" id="archiveToggleBtn" class="text-orange-300 text-[10px] font-black uppercase underline">View Archived Staff</button>
-                    <button onclick="pullStaffFromCloud()" class="text-green-400 text-[10px] font-black uppercase underline ml-4">Pull Updates from Cloud</button>
+                    <button onclick="pullStaffFromCloud()" class="text-green-400 text-[10px] font-black uppercase underline ml-4 tracking-widest">Pull Updates from Cloud</button>
                 </div>
             </div>
             <div class="bg-blue-900 p-4 rounded-3xl border border-blue-700 text-center min-w-[140px]">
@@ -35,6 +35,7 @@
                     
                     <div class="grid grid-cols-1 gap-2">
                         <input id="name" type="text" placeholder="Full Name" class="w-full p-3 border-2 rounded-xl font-black bg-slate-50 outline-none focus:border-green-500">
+                        <input id="email" type="email" placeholder="Email Address" class="w-full p-3 border-2 rounded-xl font-bold bg-slate-50 text-xs outline-none focus:border-green-500">
                         <select id="role" class="w-full p-3 border-2 rounded-xl font-black bg-green-50 text-green-800 uppercase text-xs outline-none focus:border-green-500">
                             <option value="HCA">HCA (Health Care Assistant)</option>
                             <option value="RGN">RGN (Registered Nurse)</option>
@@ -67,10 +68,6 @@
                                 <option value="accrue">Accrue (12.07%)</option>
                             </select>
                         </div>
-                        <div class="flex items-center gap-2 pt-1">
-                            <input type="checkbox" id="pensionEnroll" class="w-4 h-4 accent-blue-600">
-                            <label for="pensionEnroll" class="text-[9px] font-black uppercase text-blue-600">Auto-Enroll Pension</label>
-                        </div>
                     </div>
 
                     <div class="bg-slate-50 p-4 rounded-2xl border space-y-2">
@@ -80,13 +77,11 @@
                             <input id="wdN" type="number" step="0.01" placeholder="WD Night" class="p-2 border rounded-lg text-[10px] font-bold">
                             <input id="weD" type="number" step="0.01" placeholder="WE Day" class="p-2 border rounded-lg text-[10px] font-bold border-blue-200">
                             <input id="weN" type="number" step="0.01" placeholder="WE Night" class="p-2 border rounded-lg text-[10px] font-bold border-blue-200">
-                            <input id="bhD" type="number" step="0.01" placeholder="BH Day" class="p-2 border rounded-lg text-[10px] font-bold border-orange-200">
-                            <input id="bhN" type="number" step="0.01" placeholder="BH Night" class="p-2 border rounded-lg text-[10px] font-bold border-orange-200">
                         </div>
                     </div>
                     
                     <button onclick="saveRecord()" id="saveBtn" class="w-full bg-green-600 text-white py-4 rounded-2xl font-black uppercase shadow-xl hover:bg-black transition border-b-4 border-green-800">Save Record</button>
-                    <button onclick="resetUI()" id="cancelBtn" class="w-full hidden mt-2 py-2 text-[10px] font-black uppercase text-slate-400 underline text-center">Cancel Edit</button>
+                    <button onclick="resetUI()" id="cancelBtn" class="w-full hidden mt-2 py-2 text-[10px] font-black uppercase text-slate-400 underline text-center font-bold">Cancel Edit</button>
                 </div>
             </div>
 
@@ -105,118 +100,16 @@
         function getStaff() { return JSON.parse(localStorage.getItem(STAFF_KEY)) || []; }
         function getShifts() { return JSON.parse(localStorage.getItem(SHIFT_KEY)) || []; }
 
-        // --- NEW CLOUD SYNC LOGIC ---
-
         async function pullStaffFromCloud() {
             try {
                 const response = await fetch(`${scriptURL}?tab=staff`);
                 const cloudData = await response.json();
                 if (Array.isArray(cloudData)) {
-                    let localStaff = getStaff();
-                    
-                    // SMART MERGE: Replace local with cloud version if ID matches, or add new
-                    const cloudIds = cloudData.map(s => String(s.id));
-                    const remainingLocal = localStaff.filter(ls => !cloudIds.includes(String(ls.id)));
-                    const merged = [...remainingLocal, ...cloudData];
-                    
-                    localStorage.setItem(STAFF_KEY, JSON.stringify(merged));
+                    localStorage.setItem(STAFF_KEY, JSON.stringify(cloudData));
                     render();
-                    alert("Cloud Sync Complete: Staff Registry Updated.");
+                    alert("Registry Updated from Cloud.");
                 }
-            } catch (e) {
-                console.error("Pull failed", e);
-                alert("Failed to pull data. Check your connection.");
-            }
-        }
-
-        // --- EXISTING MATH & RENDER ENGINE ---
-
-        function calculateStats(staffId, dateFrom = null, dateTo = null) {
-            const staffMember = getStaff().find(s => s.id === staffId);
-            if (!staffMember) return { totalHours: 0, totalGross: 0, holidayPay: 0, shiftCount: 0 };
-            
-            let shifts = getShifts().filter(s => s.staffId === staffId && s.status === 'completed');
-            
-            if(dateFrom && dateTo) {
-                shifts = shifts.filter(s => s.date >= dateFrom && s.date <= dateTo);
-            }
-
-            let totalGross = 0;
-            let totalHours = 0;
-
-            shifts.forEach(s => {
-                const startHour = parseInt(s.start.split(':')[0]);
-                const dayOfWeek = new Date(s.date).getDay();
-                const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-                const isBH = s.isBankHoliday === true;
-                
-                const [shH, shM] = s.start.split(':').map(Number);
-                const [ehH, ehM] = s.end.split(':').map(Number);
-                let d = (ehH + ehM/60) - (shH + shM/60);
-                if(d < 0) d += 24;
-                
-                const isNight = (startHour >= 19 || startHour < 6);
-                let rate = 0;
-
-                if (isBH) rate = isNight ? staffMember.bhN : staffMember.bhD;
-                else if (isWeekend) rate = isNight ? staffMember.weN : staffMember.weD;
-                else rate = isNight ? staffMember.wdN : staffMember.wdD;
-
-                totalHours += d;
-                totalGross += (d * parseFloat(rate || 0));
-            });
-
-            const holidayPay = totalGross * 0.1207;
-            return { totalHours, totalGross, holidayPay, shiftCount: shifts.length };
-        }
-
-        function calculateTotalHours(id) {
-            const from = document.getElementById(`from_${id}`).value;
-            const to = document.getElementById(`to_${id}`).value;
-            if(!from || !to) return alert("Select a date range first.");
-            const stats = calculateStats(id, from, to);
-            alert(`REPORT: ${stats.shiftCount} shifts\n---\nHours: ${stats.totalHours.toFixed(2)}\nGross: £${stats.totalGross.toFixed(2)}\nHoliday (12.07%): £${stats.holidayPay.toFixed(2)}\nTOTAL: £${(stats.totalGross + stats.holidayPay).toFixed(2)}`);
-        }
-
-        function generateStatDoc(type, id) {
-            const s = getStaff().find(x => x.id === id);
-            const from = document.getElementById(`from_${id}`).value;
-            const to = document.getElementById(`to_${id}`).value;
-            const stats = calculateStats(id, from, to);
-            
-            document.getElementById('printArea').innerHTML = `
-                <div class="text-center mb-10">
-                    <h1 class="text-5xl font-black uppercase underline">${type} DOCUMENT</h1>
-                    <p class="text-slate-500 mt-2 font-bold uppercase">Everest Personnel Statutory Record</p>
-                </div>
-                <div class="grid grid-cols-2 gap-8 mb-10 border-b-4 pb-10">
-                    <div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase">Employee</p>
-                        <p class="text-xl font-black">${s.name}</p>
-                        <p class="text-sm font-bold">${s.role} | NI: ${s.niNumber}</p>
-                        <p class="text-sm font-bold mt-1">${s.address}</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-[10px] font-black text-slate-400 uppercase">Tax & Period</p>
-                        <p class="text-lg font-bold">Code: ${s.taxCode}</p>
-                        <p class="text-sm font-black uppercase text-blue-600">${from} to ${to}</p>
-                    </div>
-                </div>
-                <div class="space-y-4 mb-10">
-                    <div class="flex justify-between border-b py-2"><span class="font-bold">Total Hours Worked</span><span>${stats.totalHours.toFixed(2)} hrs</span></div>
-                    <div class="flex justify-between border-b py-2"><span class="font-bold">Basic Gross Pay</span><span>£${stats.totalGross.toFixed(2)}</span></div>
-                    <div class="flex justify-between border-b py-2 text-green-700 font-black"><span class="uppercase">Statutory Holiday (12.07%)</span><span>£${stats.holidayPay.toFixed(2)}</span></div>
-                    <div class="flex justify-between border-t-4 border-black py-4 text-2xl font-black uppercase"><span>Net Payable Estimate</span><span>£${(stats.totalGross + stats.holidayPay).toFixed(2)}</span></div>
-                </div>
-                <div class="bg-slate-100 p-8 rounded-3xl border-2 border-black text-center">
-                    <p class="font-black uppercase text-xs">Holiday Treatment: ${s.holidayTreatment === 'pay' ? 'Paid with Wages' : 'Accrued to Pot'}</p>
-                </div>
-                <div class="mt-12 flex gap-4 no-print">
-                    <button onclick="window.print()" class="bg-black text-white px-8 py-4 font-black rounded-xl">PRINT NOW</button>
-                    <button onclick="document.getElementById('printArea').classList.add('hidden')" class="bg-slate-200 px-8 py-4 font-black rounded-xl uppercase">Close</button>
-                </div>`;
-            document.getElementById('printArea').classList.remove('hidden');
-            window.scrollTo(0, document.body.scrollHeight);
+            } catch (e) { alert("Pull failed. Check internet."); }
         }
 
         function saveRecord() {
@@ -225,6 +118,7 @@
             const record = {
                 id: editId || "ST-" + Date.now(),
                 name: document.getElementById('name').value,
+                email: document.getElementById('email').value || "",
                 role: document.getElementById('role').value,
                 address: document.getElementById('address').value,
                 phone: document.getElementById('phone').value,
@@ -234,14 +128,11 @@
                 leavingDate: document.getElementById('leavingDate').value,
                 taxCode: document.getElementById('taxCode').value.toUpperCase(),
                 holidayTreatment: document.getElementById('holidayTreatment').value,
-                pensionEnroll: document.getElementById('pensionEnroll').checked,
                 status: editId ? (staff.find(s=>s.id===editId)?.status || 'active') : 'active',
                 wdD: document.getElementById('wdD').value,
                 wdN: document.getElementById('wdN').value,
                 weD: document.getElementById('weD').value,
-                weN: document.getElementById('weN').value,
-                bhD: document.getElementById('bhD').value,
-                bhN: document.getElementById('bhN').value
+                weN: document.getElementById('weN').value
             };
 
             if(editId) {
@@ -250,48 +141,77 @@
             } else {
                 staff.push(record);
             }
+            
             localStorage.setItem(STAFF_KEY, JSON.stringify(staff));
-
-            const saveBtn = document.getElementById('saveBtn');
-            saveBtn.innerText = "Syncing...";
-            saveBtn.disabled = true;
-
+            
+            const btn = document.getElementById('saveBtn');
+            btn.innerText = "Syncing...";
+            
             fetch(scriptURL, {
                 method: 'POST',
                 mode: 'no-cors',
-                body: JSON.stringify({ action: 'syncStaff', data: [record] }) // Using the NEW Merge logic in script
+                body: JSON.stringify({ action: 'syncStaff', data: [record] })
             }).then(() => {
-                saveBtn.innerText = "Save Record";
-                saveBtn.disabled = false;
+                btn.innerText = "Save Record";
                 resetUI(); 
                 render();
-            }).catch(err => {
-                saveBtn.innerText = "Save Record";
-                saveBtn.disabled = false;
-                resetUI();
-                render();
             });
+        }
+
+        function render() {
+            const staff = getStaff().filter(s => showingArchived ? s.status === 'archived' : s.status !== 'archived');
+            document.getElementById('staffCount').innerText = staff.length;
+            
+            document.getElementById('staffDisplay').innerHTML = staff.map(s => `
+                <div class="staff-card bg-white p-8 rounded-[40px] border-b-8 shadow-xl ${s.hourCap > 0 ? 'border-orange-500' : 'border-slate-300'}">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h2 class="font-black text-2xl uppercase tracking-tighter">${s.name || 'Unknown'}</h2>
+                            <span class="text-[10px] font-black text-blue-600 uppercase tracking-widest">${s.role || 'HCA'}</span>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">NI: ${s.niNumber || '---'}</p>
+                            <p class="text-[9px] font-bold text-slate-500 lowercase">${s.email || ''}</p>
+                        </div>
+                        <div class="text-right">
+                             <span class="px-3 py-1 bg-blue-900 text-white rounded-full text-[8px] font-black uppercase">Since: ${s.startDate || 'N/A'}</span>
+                             <div class="mt-2 bg-slate-50 p-2 rounded-xl border border-slate-200 text-blue-800 text-[10px] font-bold">
+                                ${s.holidayTreatment === 'accrue' ? 'Accruing Holiday' : 'Paid Weekly'}
+                             </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 text-[9px] mb-6">
+                        <div>
+                            <p class="font-black text-slate-400 uppercase">Address:</p>
+                            <p class="font-bold leading-tight">${s.address || '---'}</p>
+                        </div>
+                        <div>
+                            <p class="font-black text-slate-400 uppercase">Phone:</p>
+                            <p class="font-bold">${s.phone || '---'}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-2">
+                        <button onclick="editRecord('${s.id}')" class="flex-1 bg-slate-100 py-3 rounded-2xl text-[9px] font-black uppercase hover:bg-slate-200">Edit</button>
+                        <button onclick="archiveRecord('${s.id}')" class="px-4 py-3 bg-white text-slate-200 rounded-2xl text-[9px] font-black uppercase border hover:text-red-500">${s.status === 'archived' ? 'Restore' : 'Archive'}</button>
+                    </div>
+                </div>`).join('');
         }
 
         function editRecord(id) {
             const p = getStaff().find(s => s.id === id);
             document.getElementById('staffId').value = p.id;
-            document.getElementById('name').value = p.name;
-            document.getElementById('role').value = p.role;
-            document.getElementById('address').value = p.address;
-            document.getElementById('phone').value = p.phone;
-            document.getElementById('niNumber').value = p.niNumber;
-            document.getElementById('hourCap').value = p.hourCap;
-            document.getElementById('startDate').value = p.startDate;
-            document.getElementById('leavingDate').value = p.leavingDate || "";
-            document.getElementById('taxCode').value = p.taxCode;
+            document.getElementById('name').value = p.name || "";
+            document.getElementById('email').value = p.email || "";
+            document.getElementById('role').value = p.role || "HCA";
+            document.getElementById('address').value = p.address || "";
+            document.getElementById('phone').value = p.phone || "";
+            document.getElementById('niNumber').value = p.niNumber || "";
+            document.getElementById('hourCap').value = p.hourCap || 0;
+            document.getElementById('startDate').value = p.startDate || "";
+            document.getElementById('taxCode').value = p.taxCode || "";
             document.getElementById('holidayTreatment').value = p.holidayTreatment || "pay";
-            document.getElementById('pensionEnroll').checked = p.pensionEnroll || false;
             
-            ['wdD','wdN','weD','weN','bhD','bhN'].forEach(r => {
-                document.getElementById(r).value = p[r] || "";
-            });
-
+            ['wdD','wdN','weD','weN'].forEach(r => { document.getElementById(r).value = p[r] || ""; });
             document.getElementById('formTitle').innerText = "Edit: " + p.name;
             document.getElementById('cancelBtn').classList.remove('hidden');
             window.scrollTo(0,0);
@@ -300,71 +220,12 @@
         function resetUI() {
             document.getElementById('staffId').value = "";
             document.querySelectorAll('input, textarea').forEach(i => i.value = "");
-            document.getElementById('pensionEnroll').checked = false;
             document.getElementById('formTitle').innerText = "Personnel Details";
             document.getElementById('cancelBtn').classList.add('hidden');
         }
 
-        function render() {
-            const staff = getStaff().filter(s => showingArchived ? s.status === 'archived' : s.status !== 'archived');
-            document.getElementById('staffCount').innerText = staff.length;
-            
-            document.getElementById('staffDisplay').innerHTML = staff.map(s => {
-                const stats = calculateStats(s.id);
-                const holidayDisplay = s.holidayTreatment === 'accrue' ? 
-                    `<p class="text-[7px] font-black uppercase text-green-600">Holiday Accrued</p><p class="text-xs font-black text-green-800">£${stats.holidayPay.toFixed(2)}</p>` : 
-                    `<p class="text-[7px] font-black uppercase text-blue-600">Holiday Pay</p><p class="text-xs font-black text-blue-800">Paid Weekly</p>`;
-                
-                return `
-                <div class="staff-card bg-white p-8 rounded-[40px] border-b-8 shadow-xl ${s.hourCap > 0 ? 'border-orange-500' : 'border-slate-300'}">
-                    <div class="flex justify-between items-start mb-4">
-                        <div>
-                            <h2 class="font-black text-2xl uppercase tracking-tighter">${s.name}</h2>
-                            <span class="text-[10px] font-black text-blue-600 uppercase tracking-widest">${s.role}</span>
-                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">NI: ${s.niNumber || 'REQUIRED'}</p>
-                        </div>
-                        <div class="text-right">
-                             <span class="px-3 py-1 bg-blue-900 text-white rounded-full text-[8px] font-black uppercase">Since: ${s.startDate || 'N/A'}</span>
-                             <div class="mt-2 bg-slate-50 p-2 rounded-xl border border-slate-200">
-                                ${holidayDisplay}
-                             </div>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4 text-[9px] mb-6">
-                        <div>
-                            <p class="font-black text-slate-400 uppercase">Address:</p>
-                            <p class="font-bold leading-tight">${s.address || 'No Address'}</p>
-                        </div>
-                        <div>
-                            <p class="font-black text-slate-400 uppercase">Phone:</p>
-                            <p class="font-bold">${s.phone || 'No Phone'}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-slate-50 p-4 rounded-3xl border mb-4">
-                        <p class="text-[8px] font-black text-slate-400 uppercase mb-2">Reports & Totals</p>
-                        <div class="grid grid-cols-2 gap-2 mb-2">
-                            <input type="date" id="from_${s.id}" class="text-[9px] p-2 border rounded-xl">
-                            <input type="date" id="to_${s.id}" class="text-[9px] p-2 border rounded-xl">
-                        </div>
-                        <div class="grid grid-cols-3 gap-1">
-                            <button onclick="calculateTotalHours('${s.id}')" class="bg-blue-600 text-white text-[8px] py-2 rounded-lg uppercase font-black hover:bg-black transition">Hours</button>
-                            <button onclick="generateStatDoc('P45', '${s.id}')" class="bg-slate-800 text-white text-[8px] py-2 rounded-lg uppercase font-black">P45</button>
-                            <button onclick="generateStatDoc('P60', '${s.id}')" class="bg-slate-800 text-white text-[8px] py-2 rounded-lg uppercase font-black">P60</button>
-                        </div>
-                    </div>
-
-                    <div class="flex gap-2">
-                        <button onclick="editRecord('${s.id}')" class="flex-1 bg-slate-100 py-3 rounded-2xl text-[9px] font-black uppercase">Edit</button>
-                        <button onclick="archiveRecord('${s.id}')" class="px-4 py-3 bg-white text-slate-200 rounded-2xl text-[9px] font-black uppercase border">${s.status === 'archived' ? 'Restore' : 'Archive'}</button>
-                    </div>
-                </div>`;
-            }).join('');
-        }
-
         function archiveRecord(id) {
-            const staff = getStaff();
+            let staff = getStaff();
             const idx = staff.findIndex(s => s.id === id);
             staff[idx].status = staff[idx].status === 'archived' ? 'active' : 'archived';
             localStorage.setItem(STAFF_KEY, JSON.stringify(staff));
