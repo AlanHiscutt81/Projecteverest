@@ -103,7 +103,7 @@
         </div>
     </div>
 
-    <div id="printArea" class="hidden bg-white max-w-[800px] mx-auto my-10 shadow-2xl p-16 border-8 border-slate-200"></div>
+    <div id="printArea" class="hidden bg-white max-w-[800px] mx-auto my-10 p-16 border-8 border-slate-200"></div>
 
     <script>
         const STAFF_KEY = 'everest_v5_final'; 
@@ -174,6 +174,7 @@
 
         function calculateHours(staffName, start, end) {
             const shifts = getShifts();
+            if (!start || !end) return 0;
             return shifts
                 .filter(s => s.staffName === staffName && s.date >= start && s.date <= end)
                 .reduce((acc, curr) => acc + parseFloat(curr.hours || 0), 0);
@@ -187,7 +188,7 @@
             document.getElementById('staffCount').innerText = staff.length;
             
             document.getElementById('staffDisplay').innerHTML = staff.map(s => {
-                const periodHours = (sDate && eDate) ? calculateHours(s.name, sDate, eDate) : 0;
+                const hoursInRange = calculateHours(s.name, sDate, eDate);
                 return `
                 <div class="staff-card bg-white p-8 rounded-[40px] border-b-8 shadow-xl ${s.hourCap > 0 ? 'border-orange-500' : 'border-slate-300'}">
                     <div class="flex justify-between items-start mb-4">
@@ -198,16 +199,16 @@
                             <p class="text-[9px] font-bold text-slate-500 lowercase">${s.email || ''}</p>
                         </div>
                         <div class="text-right">
-                             <div class="bg-blue-50 p-2 rounded-xl text-center border">
-                                <p class="text-[7px] font-black uppercase text-blue-400">Period Hours</p>
-                                <p class="text-xl font-black text-blue-900">${periodHours.toFixed(1)}</p>
+                             <div class="bg-blue-50 p-2 rounded-xl text-center border border-blue-100">
+                                <p class="text-[7px] font-black uppercase text-blue-400">Hours in Range</p>
+                                <p class="text-xl font-black text-blue-900">${hoursInRange.toFixed(1)}</p>
                              </div>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-2 mb-6">
-                        <button onclick="generateP60('${s.id}')" class="bg-blue-900 text-white py-2 rounded-xl text-[9px] font-black uppercase">Generate P60</button>
-                        <button onclick="generateP45('${s.id}')" class="bg-red-600 text-white py-2 rounded-xl text-[9px] font-black uppercase">Generate P45</button>
+                        <button onclick="generateP60('${s.id}')" class="bg-[#1e3a8a] text-white py-3 rounded-xl text-[9px] font-black uppercase hover:bg-black transition">Generate P60</button>
+                        <button onclick="generateP45('${s.id}')" class="bg-red-600 text-white py-3 rounded-xl text-[9px] font-black uppercase hover:bg-black transition">Generate P45</button>
                     </div>
                     
                     <div class="flex gap-2">
@@ -232,9 +233,8 @@
                         <div><p class="text-[10px] font-black uppercase">Employee Name</p><p class="text-xl font-bold">${p.name}</p></div>
                         <div><p class="text-[10px] font-black uppercase">National Insurance</p><p class="text-xl font-bold">${p.niNumber}</p></div>
                         <div><p class="text-[10px] font-black uppercase">Period Covered</p><p class="font-bold">${sDate} to ${eDate}</p></div>
-                        <div><p class="text-[10px] font-black uppercase">Total Hours Worked</p><p class="text-xl font-bold">${hours}</p></div>
+                        <div><p class="text-[10px] font-black uppercase">Total Hours Worked</p><p class="text-xl font-bold">${hours.toFixed(1)}</p></div>
                     </div>
-                    <p class="mt-12 text-[10px] text-slate-400">Everest Healthcare - Payroll Summary Document</p>
                 </div>`;
             window.print();
         }
