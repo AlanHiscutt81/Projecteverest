@@ -18,6 +18,7 @@
                 <div class="flex gap-4 mt-2">
                     <a href="dashboard.html" class="text-blue-200 text-[10px] font-black uppercase underline hover:text-white">← Back to Dashboard</a>
                     <button onclick="toggleArchiveView()" id="archiveToggleBtn" class="text-orange-300 text-[10px] font-black uppercase underline">View Archived Staff</button>
+                    <button onclick="pullStaffFromCloud()" class="text-green-400 text-[10px] font-black uppercase underline ml-4">Pull Updates from Cloud</button>
                 </div>
             </div>
             <div class="bg-blue-900 p-4 rounded-3xl border border-blue-700 text-center min-w-[140px]">
@@ -104,9 +105,36 @@
         function getStaff() { return JSON.parse(localStorage.getItem(STAFF_KEY)) || []; }
         function getShifts() { return JSON.parse(localStorage.getItem(SHIFT_KEY)) || []; }
 
-        // Master Math Engine for Holiday and Gross
+        // --- NEW CLOUD SYNC LOGIC ---
+
+        async function pullStaffFromCloud() {
+            try {
+                const response = await fetch(`${scriptURL}?tab=staff`);
+                const cloudData = await response.json();
+                if (Array.isArray(cloudData)) {
+                    let localStaff = getStaff();
+                    
+                    // SMART MERGE: Replace local with cloud version if ID matches, or add new
+                    const cloudIds = cloudData.map(s => String(s.id));
+                    const remainingLocal = localStaff.filter(ls => !cloudIds.includes(String(ls.id)));
+                    const merged = [...remainingLocal, ...cloudData];
+                    
+                    localStorage.setItem(STAFF_KEY, JSON.stringify(merged));
+                    render();
+                    alert("Cloud Sync Complete: Staff Registry Updated.");
+                }
+            } catch (e) {
+                console.error("Pull failed", e);
+                alert("Failed to pull data. Check your connection.");
+            }
+        }
+
+        // --- EXISTING MATH & RENDER ENGINE ---
+
         function calculateStats(staffId, dateFrom = null, dateTo = null) {
             const staffMember = getStaff().find(s => s.id === staffId);
+            if (!staffMember) return { totalHours: 0, totalGross: 0, holidayPay: 0, shiftCount: 0 };
+            
             let shifts = getShifts().filter(s => s.staffId === staffId && s.status === 'completed');
             
             if(dateFrom && dateTo) {
@@ -139,7 +167,6 @@
             });
 
             const holidayPay = totalGross * 0.1207;
-
             return { totalHours, totalGross, holidayPay, shiftCount: shifts.length };
         }
 
@@ -147,7 +174,6 @@
             const from = document.getElementById(`from_${id}`).value;
             const to = document.getElementById(`to_${id}`).value;
             if(!from || !to) return alert("Select a date range first.");
-
             const stats = calculateStats(id, from, to);
             alert(`REPORT: ${stats.shiftCount} shifts\n---\nHours: ${stats.totalHours.toFixed(2)}\nGross: £${stats.totalGross.toFixed(2)}\nHoliday (12.07%): £${stats.holidayPay.toFixed(2)}\nTOTAL: £${(stats.totalGross + stats.holidayPay).toFixed(2)}`);
         }
@@ -176,18 +202,15 @@
                         <p class="text-sm font-black uppercase text-blue-600">${from} to ${to}</p>
                     </div>
                 </div>
-
                 <div class="space-y-4 mb-10">
                     <div class="flex justify-between border-b py-2"><span class="font-bold">Total Hours Worked</span><span>${stats.totalHours.toFixed(2)} hrs</span></div>
                     <div class="flex justify-between border-b py-2"><span class="font-bold">Basic Gross Pay</span><span>£${stats.totalGross.toFixed(2)}</span></div>
                     <div class="flex justify-between border-b py-2 text-green-700 font-black"><span class="uppercase">Statutory Holiday (12.07%)</span><span>£${stats.holidayPay.toFixed(2)}</span></div>
                     <div class="flex justify-between border-t-4 border-black py-4 text-2xl font-black uppercase"><span>Net Payable Estimate</span><span>£${(stats.totalGross + stats.holidayPay).toFixed(2)}</span></div>
                 </div>
-
                 <div class="bg-slate-100 p-8 rounded-3xl border-2 border-black text-center">
                     <p class="font-black uppercase text-xs">Holiday Treatment: ${s.holidayTreatment === 'pay' ? 'Paid with Wages' : 'Accrued to Pot'}</p>
                 </div>
-
                 <div class="mt-12 flex gap-4 no-print">
                     <button onclick="window.print()" class="bg-black text-white px-8 py-4 font-black rounded-xl">PRINT NOW</button>
                     <button onclick="document.getElementById('printArea').classList.add('hidden')" class="bg-slate-200 px-8 py-4 font-black rounded-xl uppercase">Close</button>
@@ -236,7 +259,7 @@
             fetch(scriptURL, {
                 method: 'POST',
                 mode: 'no-cors',
-                body: JSON.stringify({ tab: 'staff', payload: record })
+                body: JSON.stringify({ action: 'syncStaff', data: [record] }) // Using the NEW Merge logic in script
             }).then(() => {
                 saveBtn.innerText = "Save Record";
                 saveBtn.disabled = false;
